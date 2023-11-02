@@ -24,7 +24,13 @@ class PlayerNotDealerError(Exception):
 
 
 class LobbyObserver:
+    def player_disconnected(self, player: Player):
+        pass
+
     def player_joined(self, player: Player):
+        pass
+
+    def player_left(self, player: Player):
         pass
 
     def player_connected(self, player: Player):
@@ -66,6 +72,10 @@ class Player:
     def set_connected(self) -> None:
         self.is_connected = True
         self.observer.player_connected(self)
+
+    def set_disconnected(self) -> None:
+        self.is_connected = False
+        self.observer.player_disconnected(self)
 
 
 class CardOnTable:
@@ -159,3 +169,6 @@ class Lobby:
     def add_player(self, player: Player):
         self.players.append(player)
         self.observer.player_joined(player)
+
+    def remove_player(self, player: Player):
+        self.observer.player_left(player)

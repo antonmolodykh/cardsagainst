@@ -1,14 +1,15 @@
 from __future__ import annotations
 
 import asyncio
-from asyncio import sleep
-from enum import Enum, StrEnum
+import traceback
+from enum import StrEnum
 from typing import Generic, TypeVar
 from uuid import uuid4
 
 from fastapi import FastAPI, WebSocket, Query, HTTPException
 from pydantic import BaseModel, ConfigDict
 from pydantic.alias_generators import to_camel
+from starlette.websockets import WebSocketDisconnect
 from typing_extensions import Annotated
 
 from fastapi.middleware.cors import CORSMiddleware
@@ -44,7 +45,7 @@ def get_player_data_from_player(player: Player) -> PlayerData:
         state=PlayerState.PENDING,
         score=player.score,
         is_lobby_owner=False,
-        is_connected=player.is_connected
+        is_connected=player.is_connected,
     )
 
 
@@ -56,31 +57,53 @@ async def send_messages():
         event = await queue.get()
 
 
-class PlayerConnectedData(ApiModel):
+class PlayerIdData(ApiModel):
     uuid: str
 
 
 class BroadcastObserver(LobbyObserver):
+    PLAYER_REMOVAL_DELAY: int = 15
+
     def __init__(self):
         self.websockets = []
         self.queue = asyncio.Queue()
+
+    def add_websocket(self, websocket: WebSocket):
+        self.websockets.append(websocket)
+
+    def remove_websocket(self, websocket: WebSocket):
+        self.websockets.remove(websocket)
+
+    async def schedule_player_removal(self, player):
+        await asyncio.sleep(self.PLAYER_REMOVAL_DELAY)
+        if player.is_connected is False:
+            lobby.remove_player(player)
 
     def player_joined(self, player: Player):
         self.queue.put_nowait(
             Event(id=1, type="playerJoined", data=get_player_data_from_player(player))
         )
 
+    def player_left(self, player: Player):
+        self.queue.put_nowait(
+            Event(id=1, type="playerLeft", data=PlayerIdData(uuid=player.uid))
+        )
+
     def player_connected(self, player: Player):
         self.queue.put_nowait(
-            Event(
-                id=2, type="playerConnected", data=PlayerConnectedData(uuid=player.uid)
-            )
+            Event(id=2, type="playerConnected", data=PlayerIdData(uuid=player.uid))
         )
+
+    def player_disconnected(self, player: Player):
+        self.queue.put_nowait(
+            Event(id=1, type="playerDisconnected", data=PlayerIdData(uuid=player.uid))
+        )
+        asyncio.create_task(self.schedule_player_removal(player))
 
     async def send_messages(self):
         while True:
             event = await self.queue.get()
-            print(event)
+            print(f"Event: {event}")
             await asyncio.gather(
                 *(
                     websocket.send_json(event.model_dump(by_alias=True))
@@ -173,6 +196,9 @@ async def connect(
     if not lobby_token and lobby:
         raise HTTPException(status_code=403)
 
+    if not lobby and lobby_token:
+        raise HTTPException(status_code=404)
+
     player = Player(
         profile=Profile(
             name=connect_request.name,
@@ -187,8 +213,6 @@ async def connect(
         lobby.add_player(player)
 
     else:
-
-
         setups = Deck(cards=[SetupCard(), SetupCard(), SetupCard()])
         punchlines = Deck(cards=[PunchlineCard(), PunchlineCard(), PunchlineCard()])
 
@@ -218,7 +242,7 @@ async def websocket_endpoint(
     player = players[player_token]
     # TODO пренадлежность к лобби
 
-    broadcast_observer.websockets.append(websocket)
+    broadcast_observer.add_websocket(websocket)
     player.set_connected()
     await websocket.send_json(
         Event(
@@ -235,9 +259,17 @@ async def websocket_endpoint(
         ).model_dump(by_alias=True)
     )
 
-    print("sent")
     while True:
-        await sleep(1)
+        try:
+            data = await websocket.receive_json()
+            print(f"Received data: {data}")
+        except WebSocketDisconnect:
+            broadcast_observer.remove_websocket(websocket)
+            player.set_disconnected()
+            break
+        except Exception:
+            print(f"Unexpected error: {traceback.format_exc()}")
+
     # try:
     #     while True:
     #         message = await websocket.receive_text()
