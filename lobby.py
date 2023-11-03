@@ -73,7 +73,6 @@ class Player:
 
     def set_connected(self) -> None:
         self.is_connected = True
-        self.observer.player_connected(self)
 
     def set_disconnected(self) -> None:
         self.is_connected = False
@@ -138,6 +137,10 @@ class Lobby:
         self.setups = setups
         self.observer = observer
 
+    @property
+    def all_players(self):
+        return [self.lead, *self.players]
+
     def change_lead(self) -> None:
         self.players.append(self.lead)
         self.lead = self.players.pop(0)
@@ -168,8 +171,14 @@ class Lobby:
         card_on_table = self.get_card_from_table(card=card)
         card_on_table.player.score += 1
 
+    def set_connected(self, player: Player):
+        player.set_disconnected()
+        for pl in self.all_players:
+            if pl is not player:
+                pl.observer.player_connected(player)
+
     def add_player(self, player: Player):
-        for pl in self.players:
+        for pl in self.all_players:
             pl.observer.player_joined(player)
         self.players.append(player)
 
