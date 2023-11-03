@@ -1,4 +1,4 @@
-from unittest.mock import Mock, call
+from unittest.mock import Mock, call, ANY
 
 import pytest
 
@@ -12,7 +12,7 @@ from lobby import (
     PlayerNotPunchlineCardHolderError,
     Profile,
     PunchlineCard,
-    SetupCard,
+    SetupCard, LobbySettings, PlayerNotOwnerError
 )
 
 
@@ -48,27 +48,47 @@ def observer() -> LobbyObserver:
 
 
 @pytest.fixture
-def egor(observer: LobbyObserver) -> Player:
-    return Player(
+def egor() -> Player:
+    player = Player(
         profile=Profile(name="egor", emoji="🍎", background_color="#ff0000"),
-        observer=observer,
     )
+    return player
 
 
 @pytest.fixture
-def anton(observer: LobbyObserver) -> Player:
-    return Player(
+def anton() -> Player:
+    player = Player(
         profile=Profile(name="anton", emoji="🍎", background_color="#ff0000"),
-        observer=observer,
     )
+    return player
 
 
 @pytest.fixture
-def yura(observer: LobbyObserver) -> Player:
+def yura() -> Player:
     return Player(
         profile=Profile(name="yura", emoji="🍎", background_color="#ff0000"),
-        observer=observer,
     )
+
+
+@pytest.fixture(name="egor connected")
+def egor_connected(egor: Player, observer: Mock) -> None:
+    player_mock = Mock(LobbyObserver)
+    observer.attach_mock(player_mock, "egor")
+    egor.observer = player_mock
+
+
+@pytest.fixture(name="anton connected")
+def anton_connected(anton: Player, observer: Mock) -> None:
+    player_mock = Mock(LobbyObserver)
+    observer.attach_mock(player_mock, "anton")
+    anton.observer = player_mock
+
+
+@pytest.fixture(name="yura connected")
+def yura_connected(yura: Player, observer: Mock) -> None:
+    player_mock = Mock(LobbyObserver)
+    observer.attach_mock(player_mock, "yura")
+    yura.observer = player_mock
 
 
 def test_lobby_change_lead(
@@ -220,21 +240,14 @@ def test_lobby_lead_choose_punchline_card(
     assert egor.score == 1
 
 
+@pytest.mark.usefixtures("egor connected")
 def test_player_joined(
-    egor: Player,
     setup_cards_deck: Deck[SetupCard],
     punchline_cards_deck: Deck[PunchlineCard],
+    egor: Player,
+    yura: Player,
     observer: Mock,
 ) -> None:
-    yura_mock = Mock()
-    yura = Player(
-        profile=Profile(name="egor", emoji="🍎", background_color="#ff0000"),
-        observer=yura_mock,
-    )
-
-    observer.attach_mock(yura_mock, "yura")
-    # observer.attach_mock(egor_mock, "egor")
-
     lobby = Lobby(
         lead=egor,
         players=[],
@@ -245,27 +258,21 @@ def test_player_joined(
     )
     # FIXME: I want to test which player has received the message
     lobby.add_player(yura)
+
     expected_events = [
         call.egor.player_joined(yura),
-        # call.egor.player_joined(),
     ]
     observer.assert_has_calls(expected_events)
 
 
+@pytest.mark.usefixtures("yura connected")
 def test_player_not_received_self_joined(
     setup_cards_deck: Deck[SetupCard],
     punchline_cards_deck: Deck[PunchlineCard],
     egor: Player,
+    yura: Player,
     observer: Mock,
 ) -> None:
-    yura_mock = Mock()
-    yura = Player(
-        profile=Profile(name="egor", emoji="🍎", background_color="#ff0000"),
-        observer=yura_mock,
-    )
-
-    observer.attach_mock(yura_mock, "yura")
-
     lobby = Lobby(
         lead=egor,
         players=[],
@@ -282,6 +289,55 @@ def test_player_not_received_self_joined(
     assert not any(event in observer.mock_calls for event in unexpected_events)
 
 
+@pytest.mark.usefixtures("egor connected", "yura connected")
+def test_player_disconnected(
+    egor: Player,
+    yura: Player,
+    setup_cards_deck: Deck[SetupCard],
+    punchline_cards_deck: Deck[PunchlineCard],
+    observer: Mock,
+) -> None:
+    lobby = Lobby(
+        lead=egor,
+        players=[],
+        owner=egor,
+        setups=setup_cards_deck,
+        punchlines=punchline_cards_deck,
+        observer=observer,
+    )
+    lobby.add_player(yura)
+    lobby.set_connected(yura)
+
+    lobby.set_disconnected(yura)
+
+
+@pytest.mark.usefixtures("egor connected", "yura connected")
+def test_player_disconnected(
+    egor: Player,
+    yura: Player,
+    setup_cards_deck: Deck[SetupCard],
+    punchline_cards_deck: Deck[PunchlineCard],
+    observer: Mock,
+) -> None:
+    lobby = Lobby(
+        lead=egor,
+        players=[],
+        owner=egor,
+        setups=setup_cards_deck,
+        punchlines=punchline_cards_deck,
+        observer=observer,
+    )
+    lobby.add_player(yura)
+    lobby.set_connected(yura)
+
+    lobby.set_disconnected(yura)
+
+    expected_events = [
+        call.egor.player_disconnected(yura),
+    ]
+    observer.assert_has_calls(expected_events)
+
+
 def test_player_connected(
     egor: Player,
     yura: Player,
@@ -289,18 +345,107 @@ def test_player_connected(
     punchline_cards_deck: Deck[PunchlineCard],
     observer: Mock,
 ) -> None:
+    egor_mock = Mock()
+    egor = Player(
+        profile=Profile(name="egor", emoji="🍎", background_color="#ff0000"),
+        observer=egor_mock,
+    )
+
+    yura_mock = Mock()
+    yura = Player(
+        profile=Profile(name="egor", emoji="🍎", background_color="#ff0000"),
+        observer=yura_mock,
+    )
+
+    observer.attach_mock(yura_mock, "yura")
+    observer.attach_mock(egor_mock, "egor")
+
     # FIXME: Lobby is not used. Looks like lobby must be required to send events
-    # lobby = Lobby(
-    #     lead=egor,
-    #     players=[yura],
-    #     owner=egor,
-    #     setups=setup_cards_deck,
-    #     punchlines=punchline_cards_deck,
-    #     observer=observer,
-    # )
+    lobby = Lobby(
+        lead=egor,
+        players=[yura],
+        owner=egor,
+        setups=setup_cards_deck,
+        punchlines=punchline_cards_deck,
+        observer=observer,
+    )
     # FIXME: I want to test which player has received the message
-    yura.set_connected()
+
+    lobby.set_connected(yura)
+
     expected_events = [
-        call.player_connected(yura),
+        call.egor.player_connected(yura),
     ]
     observer.assert_has_calls(expected_events)
+
+
+def test_owner_start_game(
+    egor: Player,
+    yura: Player,
+    setup_cards_deck: Deck[SetupCard],
+    punchline_cards_deck: Deck[PunchlineCard],
+    observer: Mock,
+) -> None:
+    egor_mock = Mock()
+    egor = Player(
+        profile=Profile(name="egor", emoji="🍎", background_color="#ff0000"),
+        observer=egor_mock,
+    )
+
+    observer.attach_mock(egor_mock, "egor")
+
+    lobby = Lobby(
+        lead=egor,
+        players=[],
+        owner=egor,
+        setups=setup_cards_deck,
+        punchlines=punchline_cards_deck,
+        observer=observer,
+    )
+
+    lobby_settings = LobbySettings(turn_duration=30)
+    lobby.start_game(egor, lobby_settings)
+
+    expected_events = [
+        call.egor.turn_started(turn_duration=lobby_settings.turn_duration),
+    ]
+    observer.assert_has_calls(expected_events)
+
+
+def test_not_owner_start_game(
+    egor: Player,
+    yura: Player,
+    setup_cards_deck: Deck[SetupCard],
+    punchline_cards_deck: Deck[PunchlineCard],
+    observer: Mock,
+) -> None:
+    egor_mock = Mock()
+    egor = Player(
+        profile=Profile(name="egor", emoji="🍎", background_color="#ff0000"),
+        observer=egor_mock,
+    )
+
+    yura_mock = Mock()
+    yura = Player(
+        profile=Profile(name="yura", emoji="🍎", background_color="#ff0000"),
+        observer=yura_mock,
+    )
+
+    lobby = Lobby(
+        lead=egor,
+        players=[yura],
+        owner=egor,
+        setups=setup_cards_deck,
+        punchlines=punchline_cards_deck,
+        observer=observer,
+    )
+
+    lobby_settings = LobbySettings(turn_duration=30)
+    with pytest.raises(PlayerNotOwnerError):
+        lobby.start_game(yura, lobby_settings)
+
+    unexpected_events = [
+        call.egor.turn_started(ANY),
+        call.yura.turn_started(ANY),
+    ]
+    assert not any(event in observer.mock_calls for event in unexpected_events)
