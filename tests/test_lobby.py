@@ -222,11 +222,19 @@ def test_lobby_lead_choose_punchline_card(
 
 def test_player_joined(
     egor: Player,
-    yura: Player,
     setup_cards_deck: Deck[SetupCard],
     punchline_cards_deck: Deck[PunchlineCard],
     observer: Mock,
 ) -> None:
+    yura_mock = Mock()
+    yura = Player(
+        profile=Profile(name="egor", emoji="🍎", background_color="#ff0000"),
+        observer=yura_mock,
+    )
+
+    observer.attach_mock(yura_mock, "yura")
+    # observer.attach_mock(egor_mock, "egor")
+
     lobby = Lobby(
         lead=egor,
         players=[],
@@ -238,7 +246,8 @@ def test_player_joined(
     # FIXME: I want to test which player has received the message
     lobby.add_player(yura)
     expected_events = [
-        call.player_joined(yura),
+        call.yura.player_joined(yura),
+        # call.egor.player_joined(),
     ]
     observer.assert_has_calls(expected_events)
 
