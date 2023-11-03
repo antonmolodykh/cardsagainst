@@ -246,7 +246,7 @@ def test_player_joined(
     # FIXME: I want to test which player has received the message
     lobby.add_player(yura)
     expected_events = [
-        call.yura.player_joined(yura),
+        call.egor.player_joined(yura),
         # call.egor.player_joined(),
     ]
     observer.assert_has_calls(expected_events)

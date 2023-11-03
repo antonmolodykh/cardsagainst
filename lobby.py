@@ -169,8 +169,9 @@ class Lobby:
         card_on_table.player.score += 1
 
     def add_player(self, player: Player):
+        for pl in self.players:
+            pl.observer.player_joined(player)
         self.players.append(player)
-        self.observer.player_joined(player)
 
     def remove_player(self, player: Player):
         self.observer.player_left(player)

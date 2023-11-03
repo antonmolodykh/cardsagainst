@@ -238,8 +238,11 @@ async def websocket_endpoint(
     lobby_token: Annotated[str, Query(alias="lobbyToken")],
 ):
     await websocket.accept()
-    # connected_clients.append(websocket)
-    player = players[player_token]
+
+    try:
+        player = players[player_token]
+    except KeyError:
+        raise HTTPException(status_code=404)
     # TODO пренадлежность к лобби
 
     broadcast_observer.add_websocket(websocket)
@@ -269,15 +272,6 @@ async def websocket_endpoint(
             break
         except Exception:
             print(f"Unexpected error: {traceback.format_exc()}")
-
-    # try:
-    #     while True:
-    #         message = await websocket.receive_text()
-    #         await send_message_to_all(message)
-    # except Exception as e:
-    #     print(f"Ошибка: {e}")
-    # finally:
-    #     connected_clients.remove(websocket)
 
 
 @app.get("/")
