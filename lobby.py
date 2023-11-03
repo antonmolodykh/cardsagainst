@@ -18,6 +18,10 @@ class PlayerNotDealerError(Exception):
     pass
 
 
+class PlayerNotOwnerError(Exception):
+    pass
+
+
 # class State(Enum):
 #     MOVE = "move"
 #     JUDGING = "judging"
@@ -36,6 +40,12 @@ class LobbyObserver:
         pass
 
     def player_connected(self, player: Player):
+        pass
+
+    def game_started(self):
+        pass
+
+    def turn_started(self, turn_duration: int):
         pass
 
 
@@ -65,18 +75,18 @@ class Player:
     profile: Profile
     is_connected: bool = False
 
-    def __init__(self, profile: Profile, observer: LobbyObserver) -> None:
+    def __init__(self, profile: Profile) -> None:
         self.profile = profile
         self.punchline_cards = []
         self.uid = uuid4().hex
-        self.observer = observer
+        self.observer = LobbyObserver()
 
     def set_connected(self) -> None:
         self.is_connected = True
 
     def set_disconnected(self) -> None:
+        self.observer = LobbyObserver()
         self.is_connected = False
-        self.observer.player_disconnected(self)
 
 
 class CardOnTable:
@@ -107,6 +117,10 @@ class Deck(Generic[AnyCard]):
         return card
 
 
+class LobbySettings(BaseModel):
+    turn_duration: int | None = 20
+
+
 class Lobby:
     uid: uuid4
     players: list[Player]
@@ -117,6 +131,7 @@ class Lobby:
     punchlines: Deck[PunchlineCard]
     setups: Deck[SetupCard]
     observer: LobbyObserver
+    settings: LobbySettings
 
     def __init__(
         self,
@@ -136,10 +151,14 @@ class Lobby:
         self.punchlines = punchlines
         self.setups = setups
         self.observer = observer
+        self.settings = LobbySettings()
 
     @property
     def all_players(self):
         return [self.lead, *self.players]
+
+    def _all_players_except(self, player: Player):
+        return [p for p in self.all_players if p is not player]
 
     def change_lead(self) -> None:
         self.players.append(self.lead)
@@ -172,15 +191,31 @@ class Lobby:
         card_on_table.player.score += 1
 
     def set_connected(self, player: Player):
+        player.set_connected()
+        for pl in self._all_players_except(player):
+            pl.observer.player_connected(player)
+
+    def set_disconnected(self, player: Player):
         player.set_disconnected()
-        for pl in self.all_players:
-            if pl is not player:
-                pl.observer.player_connected(player)
+        for pl in self._all_players_except(player):
+            pl.observer.player_disconnected(player)
 
     def add_player(self, player: Player):
         for pl in self.all_players:
             pl.observer.player_joined(player)
         self.players.append(player)
 
-    def remove_player(self, player: Player):
-        self.observer.player_left(player)
+    # def remove_player(self, player: Player):
+    #     for pl in self._all_players_except(player):
+    #         pl.observer.player_left(player)
+    #     self.players.remove(player)
+
+    def start_game(self, player: Player, lobby_settings: LobbySettings) -> None:
+        if player is not self.owner:
+            raise PlayerNotOwnerError
+
+        self.settings = lobby_settings
+        for pl in self.all_players:
+            pl.observer.game_started()
+            pl.observer.turn_started(turn_duration=self.settings.turn_duration)
+

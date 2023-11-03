@@ -14,7 +14,7 @@ from typing_extensions import Annotated
 
 from fastapi.middleware.cors import CORSMiddleware
 
-from lobby import Lobby, Player, Profile, Deck, SetupCard, PunchlineCard, LobbyObserver
+from lobby import Lobby, Player, Profile, Deck, SetupCard, PunchlineCard, LobbyObserver, LobbySettings
 
 lobby: Lobby = None
 observers: list[LobbyObserver] = []
@@ -74,10 +74,10 @@ class BroadcastObserver(LobbyObserver):
     def remove_websocket(self, websocket: WebSocket):
         self.websockets.remove(websocket)
 
-    async def schedule_player_removal(self, player):
-        await asyncio.sleep(self.PLAYER_REMOVAL_DELAY)
-        if player.is_connected is False:
-            lobby.remove_player(player)
+    # async def schedule_player_removal(self, player):
+    #     await asyncio.sleep(self.PLAYER_REMOVAL_DELAY)
+    #     if player.is_connected is False:
+    #         lobby.remove_player(player)
 
     def player_joined(self, player: Player):
         self.queue.put_nowait(
@@ -98,7 +98,7 @@ class BroadcastObserver(LobbyObserver):
         self.queue.put_nowait(
             Event(id=1, type="playerDisconnected", data=PlayerIdData(uuid=player.uid))
         )
-        asyncio.create_task(self.schedule_player_removal(player))
+        # asyncio.create_task(self.schedule_player_removal(player))
 
     async def send_messages(self):
         while True:
@@ -110,6 +110,46 @@ class BroadcastObserver(LobbyObserver):
                     for websocket in self.websockets
                 )
             )
+
+
+class RemotePlayer(LobbyObserver):
+    def __init__(self, websocket: WebSocket) -> None:
+        self.websocket = websocket
+        self._queue = asyncio.Queue()
+
+    def player_joined(self, player: Player):
+        self._queue.put_nowait(
+            Event(id=1, type="playerJoined", data=get_player_data_from_player(player))
+        )
+
+    def player_left(self, player: Player):
+        self._queue.put_nowait(
+            Event(id=1, type="playerLeft", data=PlayerIdData(uuid=player.uid))
+        )
+
+    def player_connected(self, player: Player):
+        self._queue.put_nowait(
+            Event(id=2, type="playerConnected", data=PlayerIdData(uuid=player.uid))
+        )
+
+    def player_disconnected(self, player: Player):
+        self._queue.put_nowait(
+            Event(id=1, type="playerDisconnected", data=PlayerIdData(uuid=player.uid))
+        )
+
+    def game_started(self):
+        self._queue.put_nowait(Event(id=1, type="gameStarted", data=None))
+
+    def turn_started(self, turn_duration: int | None):
+        self._queue.put_nowait(
+            Event(id=1, type="turnStarted", data=TurnStartedData(timeout=turn_duration))
+        )
+
+    async def send_messages(self):
+        while True:
+            event = await self._queue.get()
+            print(f"Event: {event}")
+            await self.websocket.send_json(event.model_dump(by_alias=True))
 
 
 broadcast_observer = BroadcastObserver()
@@ -170,7 +210,15 @@ AnyEventData = TypeVar("AnyEventData", bound=ApiModel)
 class Event(ApiModel, Generic[AnyEventData]):
     id: int
     type: str
-    data: AnyEventData
+    data: AnyEventData | None
+
+
+class StartGameData(ApiModel):
+    timeout: int | None
+
+
+class TurnStartedData(ApiModel):
+    timeout: int | None
 
 
 class LobbyState(ApiModel):
@@ -205,13 +253,11 @@ async def connect(
             emoji=connect_request.emoji,
             background_color=connect_request.background_color,
         ),
-        observer=broadcast_observer,
     )
     player_token = uuid4().hex
     players[player_token] = player
     if lobby_token:
         lobby.add_player(player)
-
     else:
         setups = Deck(cards=[SetupCard(), SetupCard(), SetupCard()])
         punchlines = Deck(cards=[PunchlineCard(), PunchlineCard(), PunchlineCard()])
@@ -245,8 +291,11 @@ async def websocket_endpoint(
         raise HTTPException(status_code=404)
     # TODO пренадлежность к лобби
 
-    broadcast_observer.add_websocket(websocket)
-    player.set_connected()
+    observer = RemotePlayer(websocket=websocket)
+    send_messages_task = asyncio.create_task(observer.send_messages())
+    player.observer = observer
+
+    lobby.set_connected(player)
     await websocket.send_json(
         Event(
             id=1,
@@ -264,11 +313,18 @@ async def websocket_endpoint(
 
     while True:
         try:
-            data = await websocket.receive_json()
-            print(f"Received data: {data}")
+            json_data = await websocket.receive_json()
+            event = Event[StartGameData].model_validate(json_data)
+            match event.data:
+                case StartGameData(timeout=turn_duration):
+                    lobby.start_game(
+                        player=player,
+                        lobby_settings=LobbySettings(turn_duration=turn_duration)
+                    )
+            print(f"Received data: {json_data}")
         except WebSocketDisconnect:
-            broadcast_observer.remove_websocket(websocket)
-            player.set_disconnected()
+            send_messages_task.cancel()
+            lobby.set_disconnected(player)
             break
         except Exception:
             print(f"Unexpected error: {traceback.format_exc()}")
