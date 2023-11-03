@@ -252,6 +252,36 @@ def test_player_joined(
     observer.assert_has_calls(expected_events)
 
 
+def test_player_not_received_self_joined(
+    setup_cards_deck: Deck[SetupCard],
+    punchline_cards_deck: Deck[PunchlineCard],
+    egor: Player,
+    observer: Mock,
+) -> None:
+    yura_mock = Mock()
+    yura = Player(
+        profile=Profile(name="egor", emoji="🍎", background_color="#ff0000"),
+        observer=yura_mock,
+    )
+
+    observer.attach_mock(yura_mock, "yura")
+
+    lobby = Lobby(
+        lead=egor,
+        players=[],
+        owner=egor,
+        setups=setup_cards_deck,
+        punchlines=punchline_cards_deck,
+        observer=observer,
+    )
+    lobby.add_player(yura)
+
+    unexpected_events = [
+        call.yura.player_joined(yura),
+    ]
+    assert not any(event in observer.mock_calls for event in unexpected_events)
+
+
 def test_player_connected(
     egor: Player,
     yura: Player,
