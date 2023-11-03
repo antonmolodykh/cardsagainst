@@ -44,7 +44,7 @@ def get_player_data_from_player(player: Player) -> PlayerData:
         state=PlayerState.PENDING,
         score=player.score,
         is_lobby_owner=False,
-        is_connected=player.is_connected
+        is_connected=player.is_connected,
     )
 
 
@@ -187,8 +187,6 @@ async def connect(
         lobby.add_player(player)
 
     else:
-
-
         setups = Deck(cards=[SetupCard(), SetupCard(), SetupCard()])
         punchlines = Deck(cards=[PunchlineCard(), PunchlineCard(), PunchlineCard()])
 
