@@ -38,13 +38,13 @@ class ApiModel(BaseModel):
 
 def get_player_data_from_player(player: Player) -> PlayerData:
     return PlayerData(
-        uuid=player.uid,
+        uuid=player.uuid,
         name=player.profile.name,
         emoji=player.profile.emoji,
         background_color=player.profile.background_color,
         state=PlayerState.PENDING,
         score=player.score,
-        is_lobby_owner=False,
+        is_lobby_owner=lobby.owner is player,
         is_connected=player.is_connected,
     )
 
@@ -59,6 +59,9 @@ async def send_messages():
 
 class PlayerIdData(ApiModel):
     uuid: str
+
+# class GameStartedData(ApiModel):
+#     hand: list[]
 
 
 class BroadcastObserver(LobbyObserver):
@@ -86,17 +89,17 @@ class BroadcastObserver(LobbyObserver):
 
     def player_left(self, player: Player):
         self.queue.put_nowait(
-            Event(id=1, type="playerLeft", data=PlayerIdData(uuid=player.uid))
+            Event(id=1, type="playerLeft", data=PlayerIdData(uuid=player.uuid))
         )
 
     def player_connected(self, player: Player):
         self.queue.put_nowait(
-            Event(id=2, type="playerConnected", data=PlayerIdData(uuid=player.uid))
+            Event(id=2, type="playerConnected", data=PlayerIdData(uuid=player.uuid))
         )
 
     def player_disconnected(self, player: Player):
         self.queue.put_nowait(
-            Event(id=1, type="playerDisconnected", data=PlayerIdData(uuid=player.uid))
+            Event(id=1, type="playerDisconnected", data=PlayerIdData(uuid=player.uuid))
         )
         # asyncio.create_task(self.schedule_player_removal(player))
 
@@ -117,6 +120,11 @@ class RemotePlayer(LobbyObserver):
         self.websocket = websocket
         self._queue = asyncio.Queue()
 
+    def owner_changed(self, player: Player):
+        self._queue.put_nowait(
+            Event(id=1, type="ownerChanged", data=PlayerIdData(uuid=player.uuid))
+        )
+
     def player_joined(self, player: Player):
         self._queue.put_nowait(
             Event(id=1, type="playerJoined", data=get_player_data_from_player(player))
@@ -124,17 +132,17 @@ class RemotePlayer(LobbyObserver):
 
     def player_left(self, player: Player):
         self._queue.put_nowait(
-            Event(id=1, type="playerLeft", data=PlayerIdData(uuid=player.uid))
+            Event(id=1, type="playerLeft", data=PlayerIdData(uuid=player.uuid))
         )
 
     def player_connected(self, player: Player):
         self._queue.put_nowait(
-            Event(id=2, type="playerConnected", data=PlayerIdData(uuid=player.uid))
+            Event(id=2, type="playerConnected", data=PlayerIdData(uuid=player.uuid))
         )
 
     def player_disconnected(self, player: Player):
         self._queue.put_nowait(
-            Event(id=1, type="playerDisconnected", data=PlayerIdData(uuid=player.uid))
+            Event(id=1, type="playerDisconnected", data=PlayerIdData(uuid=player.uuid))
         )
 
     def game_started(self):
@@ -259,6 +267,7 @@ async def connect(
     if lobby_token:
         lobby.add_player(player)
     else:
+        setups = setup_cards_dao.get_deck(name='one')
         setups = Deck(cards=[SetupCard(), SetupCard(), SetupCard()])
         punchlines = Deck(cards=[PunchlineCard(), PunchlineCard(), PunchlineCard()])
 

@@ -30,6 +30,9 @@ class PlayerNotOwnerError(Exception):
 
 
 class LobbyObserver:
+    def owner_changed(self, player: Player):
+        pass
+
     def player_disconnected(self, player: Player):
         pass
 
@@ -50,15 +53,17 @@ class LobbyObserver:
 
 
 class Card(BaseModel):
-    uid: Annotated[uuid4, Field(default_factory=uuid4)]
+    uuid: Annotated[uuid4, Field(default_factory=uuid4)]
 
 
 class SetupCard(Card):
-    pass
+    text: str
+    case: str
+    start_with_punchline: bool
 
 
 class PunchlineCard(Card):
-    pass
+    text: dict[str, str]
 
 
 class Profile(BaseModel):
@@ -69,7 +74,7 @@ class Profile(BaseModel):
 
 class Player:
     observer: LobbyObserver
-    uid: str
+    uuid: str
     punchline_cards: list[PunchlineCard]
     score: int = 0
     profile: Profile
@@ -78,7 +83,7 @@ class Player:
     def __init__(self, profile: Profile) -> None:
         self.profile = profile
         self.punchline_cards = []
-        self.uid = uuid4().hex
+        self.uuid = uuid4().hex
         self.observer = LobbyObserver()
 
     def set_connected(self) -> None:
@@ -87,6 +92,9 @@ class Player:
     def set_disconnected(self) -> None:
         self.observer = LobbyObserver()
         self.is_connected = False
+
+    def add_punchline_card(self, card: PunchlineCard):
+        self.punchline_cards.append(card)
 
 
 class CardOnTable:
@@ -112,9 +120,7 @@ class Deck(Generic[AnyCard]):
             random.shuffle(self.dump)
             self.cards, self.dump = self.dump, []
 
-        card = self.cards.pop(random.randint(0, len(self.cards) - 1))
-        self.dump.append(card)
-        return card
+        return self.cards.pop(random.randint(0, len(self.cards) - 1))
 
 
 class LobbySettings(BaseModel):
@@ -125,13 +131,15 @@ class Lobby:
     uid: uuid4
     players: list[Player]
     lead: Player
-    owner: Player
+    owner: Player | None
     setup_card: SetupCard
     table: list[CardOnTable]
     punchlines: Deck[PunchlineCard]
     setups: Deck[SetupCard]
     observer: LobbyObserver
     settings: LobbySettings
+
+    HAND_SIZE = 10
 
     def __init__(
         self,
@@ -159,6 +167,12 @@ class Lobby:
 
     def _all_players_except(self, player: Player):
         return [p for p in self.all_players if p is not player]
+
+    def change_owner(self) -> None:
+        self.owner = None
+        for player in self.players:
+            if player.is_connected:
+                self.owner = player
 
     def change_lead(self) -> None:
         self.players.append(self.lead)
@@ -192,13 +206,24 @@ class Lobby:
 
     def set_connected(self, player: Player):
         player.set_connected()
+        if not self.owner:
+            self.owner = player
         for pl in self._all_players_except(player):
             pl.observer.player_connected(player)
 
     def set_disconnected(self, player: Player):
+        was_owner = False
+
         player.set_disconnected()
+        if player is self.owner:
+            was_owner = True
+            self.change_owner()
+
         for pl in self._all_players_except(player):
             pl.observer.player_disconnected(player)
+            if was_owner:
+                pl.observer.owner_changed(player)
+        # обработать если осталось менее 2 игроков
 
     def add_player(self, player: Player):
         for pl in self.all_players:
@@ -216,6 +241,11 @@ class Lobby:
 
         self.settings = lobby_settings
         for pl in self.all_players:
+            for _ in range(self.HAND_SIZE):
+                pl.add_punchline_card(self.punchlines.get_random_card())
             pl.observer.game_started()
-            pl.observer.turn_started(turn_duration=self.settings.turn_duration)
+
+            pl.observer.turn_started(
+                turn_duration=self.settings.turn_duration
+            )
 
