@@ -45,7 +45,7 @@ setups_deck = Deck(
         ),
         SetupCard(
             uuid="6",
-            text="Зацените! я называю это движение «_______»",
+            text="Зацените! Я назвал(а) это движение «_______»",
             text="nom",
             starts_with_punchline=False,
         ),
