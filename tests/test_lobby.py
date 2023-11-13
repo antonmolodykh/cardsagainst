@@ -39,7 +39,7 @@ def punchline_cards_deck(punchline_card: PunchlineCard) -> Deck[PunchlineCard]:
 def test_deck_get_random_card(
     setup_cards_deck: Deck[SetupCard], setup_card: SetupCard
 ) -> None:
-    assert setup_cards_deck.get_random_card() is setup_card
+    assert setup_cards_deck.get_card() is setup_card
 
 
 @pytest.fixture
@@ -147,7 +147,7 @@ def test_lobby_choose_punchline_card(
         punchlines=punchline_cards_deck,
         observer=observer,  # FIXME: It's annoying to provide it every time
     )
-    punchline_card = punchline_cards_deck.get_random_card()
+    punchline_card = punchline_cards_deck.get_card()
     anton.punchline_cards.append(punchline_card)
     lobby.choose_punchline_card(anton, punchline_card)
     assert punchline_card is lobby.get_card_from_table(punchline_card).card
@@ -169,7 +169,7 @@ def test_lobby_choose_punchline_member_not_punchline_holder(
         punchlines=punchline_cards_deck,
         observer=observer,  # FIXME: It's annoying to provide it every time
     )
-    punchline_card = punchline_cards_deck.get_random_card()
+    punchline_card = punchline_cards_deck.get_card()
     egor.punchline_cards.append(punchline_card)
     with pytest.raises(PlayerNotPunchlineCardHolderError):
         lobby.choose_punchline_card(anton, punchline_card)
@@ -190,7 +190,7 @@ def test_open_punchline_card(
         punchlines=punchline_cards_deck,
         observer=observer,  # FIXME: It's annoying to provide it every time
     )
-    punchline_card = punchline_cards_deck.get_random_card()
+    punchline_card = punchline_cards_deck.get_card()
     anton.punchline_cards.append(punchline_card)
     lobby.choose_punchline_card(anton, punchline_card)
     lobby.open_punchline_card(egor, punchline_card)
@@ -232,7 +232,7 @@ def test_lobby_lead_choose_punchline_card(
         punchlines=punchline_cards_deck,
         observer=observer,  # FIXME: It's annoying to provide it every time
     )
-    punchline_card = punchline_cards_deck.get_random_card()
+    punchline_card = punchline_cards_deck.get_card()
     egor.punchline_cards.append(punchline_card)
     lobby.choose_punchline_card(egor, punchline_card)
     lobby.open_punchline_card(anton, punchline_card)

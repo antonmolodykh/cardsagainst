@@ -14,6 +14,7 @@ from typing_extensions import Annotated
 
 from fastapi.middleware.cors import CORSMiddleware
 
+from dao import cards_dao
 from lobby import Lobby, Player, Profile, Deck, SetupCard, PunchlineCard, LobbyObserver, LobbySettings
 
 lobby: Lobby = None
@@ -60,8 +61,14 @@ async def send_messages():
 class PlayerIdData(ApiModel):
     uuid: str
 
-# class GameStartedData(ApiModel):
-#     hand: list[]
+
+class PunchlineData(ApiModel):
+    uuid: str
+    text: dict[str, str]
+
+
+class GameStartedData(ApiModel):
+    hand: list[PunchlineData]
 
 
 class BroadcastObserver(LobbyObserver):
@@ -145,12 +152,25 @@ class RemotePlayer(LobbyObserver):
             Event(id=1, type="playerDisconnected", data=PlayerIdData(uuid=player.uuid))
         )
 
-    def game_started(self):
-        self._queue.put_nowait(Event(id=1, type="gameStarted", data=None))
+    def game_started(self, player: Player):
+        self._queue.put_nowait(
+            Event(
+                id=1,
+                type="gameStarted",
+                data=GameStartedData(
+                    hand=[PunchlineData(uuid=item.uuid.hex, text=item.text) for item in player.punchline_cards]
+                )
+            )
+        )
 
     def turn_started(self, turn_duration: int | None):
         self._queue.put_nowait(
             Event(id=1, type="turnStarted", data=TurnStartedData(timeout=turn_duration))
+        )
+
+    def player_ready(self, player: Player):
+        self._queue.put_nowait(
+            Event(id=1, type="playerReady", data=PlayerIdData(uuid=player.uuid))
         )
 
     async def send_messages(self):
@@ -225,6 +245,10 @@ class StartGameData(ApiModel):
     timeout: int | None
 
 
+class MakeTurnData(ApiModel):
+    uuid: str
+
+
 class TurnStartedData(ApiModel):
     timeout: int | None
 
@@ -267,9 +291,8 @@ async def connect(
     if lobby_token:
         lobby.add_player(player)
     else:
-        setups = setup_cards_dao.get_deck(name='one')
-        setups = Deck(cards=[SetupCard(), SetupCard(), SetupCard()])
-        punchlines = Deck(cards=[PunchlineCard(), PunchlineCard(), PunchlineCard()])
+        setups = cards_dao.get_setups(deck_id='one')
+        punchlines = cards_dao.get_punchlines(deck_id='one')
 
         lobby = Lobby(
             players=[],
@@ -323,13 +346,17 @@ async def websocket_endpoint(
     while True:
         try:
             json_data = await websocket.receive_json()
-            event = Event[StartGameData].model_validate(json_data)
-            match event.data:
-                case StartGameData(timeout=turn_duration):
+
+            match json_data['type']:
+                case 'startGame':
+                    event = Event[StartGameData].model_validate(json_data)
                     lobby.start_game(
                         player=player,
-                        lobby_settings=LobbySettings(turn_duration=turn_duration)
+                        lobby_settings=LobbySettings(turn_duration=event.data.timeout)
                     )
+                case 'makeTurn':
+                    event = Event[MakeTurnData].model_validate(json_data)
+                    lobby.choose_punchline_card(player, event.data.uuid)
             print(f"Received data: {json_data}")
         except WebSocketDisconnect:
             send_messages_task.cancel()

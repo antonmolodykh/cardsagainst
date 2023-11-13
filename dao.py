@@ -1,3 +1,5 @@
+from uuid import uuid4
+
 from lobby import Deck, PunchlineCard, SetupCard
 
 
@@ -14,39 +16,38 @@ cards_dao = CardsDAO()
 setups_deck = Deck(
     cards=[
         SetupCard(
-            uuid="1",
             text="Это я почему злой был? А потому что у меня _______ не было!",
             case="gen",
-            starts_from_punchline=False,
+            starts_with_punchline=False,
         ),
         SetupCard(
-            uuid="2",
+            
             text="50% всех браков заканчиваются _______.",
             case="inst",
             starts_with_punchline=False,
         ),
         SetupCard(
-            uuid="3",
+            
             text="_______ — лучшее средство от запора.",
             case="nom",
             starts_with_punchline=True,
         ),
         SetupCard(
-            uuid="4",
+            
             text="Я напиваюсь, чтобы не помнить о _______",
             case="prep",
             starts_with_punchline=False,
         ),
         SetupCard(
-            uuid="5",
+            
             text="Я видел своего отца в слезах всего дважды: после смерти мамы и после _______",
-            text="gen",
+            case="gen",
             starts_with_punchline=False,
         ),
         SetupCard(
-            uuid="6",
+            
             text="Зацените! Я назвал(а) это движение «_______»",
-            text="nom",
+            case="nom",
             starts_with_punchline=False,
         ),
     ]
@@ -55,7 +56,7 @@ setups_deck = Deck(
 punchlines_deck = Deck(
     cards=[
         PunchlineCard(
-            uuid="1",
+            
             text={
                 "nom": "говно",
                 "gen": "говна",
@@ -66,7 +67,7 @@ punchlines_deck = Deck(
             },
         ),
         PunchlineCard(
-            uuid="2",
+            
             text={
                 "nom": "Гитлер",
                 "gen": "Гитлера",
@@ -77,7 +78,7 @@ punchlines_deck = Deck(
             },
         ),
         PunchlineCard(
-            uuid="3",
+            
             text={
                 "nom": "президент Татарстана",
                 "gen": "президента Татарстана",
@@ -88,7 +89,7 @@ punchlines_deck = Deck(
             },
         ),
         PunchlineCard(
-            uuid="4",
+            
             text={
                 "nom": "мои яйца на твоем лице",
                 "gen": "моих яиц на твоем лице",
@@ -99,7 +100,7 @@ punchlines_deck = Deck(
             },
         ),
         PunchlineCard(
-            uuid="5",
+            
             text={
                 "nom": "евреи",
                 "gen": "евреев",
@@ -110,7 +111,7 @@ punchlines_deck = Deck(
             },
         ),
         PunchlineCard(
-            uuid="6",
+            
             text={
                 "nom": "секс с животными",
                 "gen": "секса с животными",
@@ -121,7 +122,7 @@ punchlines_deck = Deck(
             },
         ),
         PunchlineCard(
-            uuid="7",
+            
             text={
                 "nom": "распад Югославии",
                 "gen": "распада Югославии",
@@ -132,7 +133,7 @@ punchlines_deck = Deck(
             },
         ),
         PunchlineCard(
-            uuid="8",
+            
             text={
                 "nom": "настаящая работа с ДМС и соц. пакетом",
                 "gen": "настоящей работы с ДМС и соц. пакетом",
@@ -143,7 +144,7 @@ punchlines_deck = Deck(
             },
         ),
         PunchlineCard(
-            uuid="9",
+            
             text={
                 "nom": "Илон Маск",
                 "gen": "Илона Маска",
@@ -154,7 +155,7 @@ punchlines_deck = Deck(
             },
         ),
         PunchlineCard(
-            uuid="10",
+            
             text={
                 "nom": "Библия",
                 "gen": "Библии",
@@ -165,7 +166,7 @@ punchlines_deck = Deck(
             },
         ),
         PunchlineCard(
-            uuid="11",
+            
             text={
                 "nom": "массовые убийства",
                 "gen": "массовых убийств",
@@ -176,7 +177,7 @@ punchlines_deck = Deck(
             },
         ),
         PunchlineCard(
-            uuid="12",
+            
             text={
                 "nom": "Путин",
                 "gen": "Путина",
@@ -187,7 +188,7 @@ punchlines_deck = Deck(
             },
         ),
         PunchlineCard(
-            uuid="13",
+            
             text={
                 "nom": "мужчины",
                 "gen": "мужчин",
@@ -198,7 +199,7 @@ punchlines_deck = Deck(
             },
         ),
         PunchlineCard(
-            uuid="14",
+            
             text={
                 "nom": "моя бывшая",
                 "gen": "моей бывшей",
@@ -209,7 +210,7 @@ punchlines_deck = Deck(
             },
         ),
         PunchlineCard(
-            uuid="15",
+            
             text={
                 "nom": "алкоголизм",
                 "gen": "алкоголизма",
@@ -220,7 +221,7 @@ punchlines_deck = Deck(
             },
         ),
         PunchlineCard(
-            uuid="16",
+            
             text={
                 "nom": "роды в тюрьме",
                 "gen": "родов в тюрьме",
@@ -231,7 +232,7 @@ punchlines_deck = Deck(
             },
         ),
         PunchlineCard(
-            uuid="17",
+            
             text={
                 "nom": "наука",
                 "gen": "науки",
@@ -242,7 +243,7 @@ punchlines_deck = Deck(
             },
         ),
         PunchlineCard(
-            uuid="18",
+            
             text={
                 "nom": "большой черный член",
                 "gen": "большого черного члена",
@@ -253,7 +254,7 @@ punchlines_deck = Deck(
             },
         ),
         PunchlineCard(
-            uuid="19",
+            
             text={
                 "nom": "мертвые родители",
                 "gen": "мертвых родителей",
@@ -264,7 +265,7 @@ punchlines_deck = Deck(
             },
         ),
         PunchlineCard(
-            uuid="20",
+            
             text={
                 "nom": "инцест",
                 "gen": "инцеста",
