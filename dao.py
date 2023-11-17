@@ -57,7 +57,7 @@ punchlines_deck = Deck(
                 "dat": "говну",
                 "acc": "говно",
                 "inst": "говном",
-                "pre": "говне",
+                "prep": "говне",
             },
         ),
         PunchlineCard(
