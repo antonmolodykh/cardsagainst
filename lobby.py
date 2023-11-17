@@ -128,7 +128,7 @@ class Deck(Generic[AnyCard]):
         self.cards = cards
         self.dump = []
         self._shuffle()
-        self.mapping = {card.uuid: card for card in cards}
+        self.mapping = {card.uuid.hex: card for card in cards}
 
     def get_card_by_uuid(self, card_uuid):
         return self.mapping[card_uuid]
@@ -289,7 +289,7 @@ class Lobby:
         self.start_turn()
 
     def start_turn(self):
-        for pl in self.players:
+        for pl in self.all_players:
             pl.observer.turn_started(
                 turn_duration=self.settings.turn_duration, lead=self.lead
             )

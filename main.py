@@ -393,7 +393,7 @@ async def websocket_endpoint(
         raise HTTPException(status_code=404)
     # TODO пренадлежность к лобби
 
-    observer = RemotePlayer(websocket=websocket, lobby=lobby)
+    observer = RemotePlayer(websocket=websocket, lobby=lobby, player=player)
     send_messages_task = asyncio.create_task(observer.send_messages())
     player.observer = observer
 
@@ -440,6 +440,7 @@ async def handle_event(json_data, player) -> None:
             try:
                 card = lobby.punchlines.get_card_by_uuid(event.data.uuid)
             except KeyError:
+                print('unknown card')
                 return
             lobby.choose_punchline_card(player, card)
         case "openTableCard":
