@@ -26,7 +26,7 @@ def setup_deck_size() -> int:
 def setup_deck(setup_deck_size: int) -> Deck[SetupCard]:
     return Deck(
         cards=[
-            SetupCard(text="", case="", start_with_punchline=False)
+            SetupCard(text="", case="", starts_with_punchline=False)
             for _ in range(setup_deck_size)
         ]
     )
@@ -136,7 +136,7 @@ def test_lobby_change_lead(
 
 
 def test_lobby_change_setup_card(lobby: Lobby, setup_deck: Deck[SetupCard]) -> None:
-    setup_card = setup_deck.get_random_card()
+    setup_card = setup_deck.get_card()
     lobby.change_setup_card(setup_card)
     assert lobby.setup_card is setup_card
 
@@ -145,7 +145,7 @@ def test_lobby_change_setup_card(lobby: Lobby, setup_deck: Deck[SetupCard]) -> N
 def test_lobby_choose_punchline_card(
     lobby: Lobby, anton: Player, punchline_deck: Deck[PunchlineCard]
 ) -> None:
-    punchline_card = punchline_deck.get_random_card()
+    punchline_card = punchline_deck.get_card()
     anton.punchline_cards.append(punchline_card)
     # TODO: Maybe move this method to player?
 
@@ -162,7 +162,7 @@ def test_lobby_choose_punchline_card(
 def test_lobby_choose_punchline_member_not_punchline_holder(
     lobby: Lobby, egor: Player, anton: Player, punchline_deck: Deck[PunchlineCard]
 ) -> None:
-    punchline_card = punchline_deck.get_random_card()
+    punchline_card = punchline_deck.get_card()
     egor.punchline_cards.append(punchline_card)
     with pytest.raises(PlayerNotPunchlineCardHolderError):
         lobby.choose_punchline_card(anton, punchline_card)
@@ -172,7 +172,7 @@ def test_lobby_choose_punchline_member_not_punchline_holder(
 def test_open_punchline_card(
     lobby: Lobby, egor: Player, anton: Player, punchline_deck: Deck[PunchlineCard]
 ) -> None:
-    punchline_card = punchline_deck.get_random_card()
+    punchline_card = punchline_deck.get_card()
     anton.punchline_cards.append(punchline_card)
     lobby.choose_punchline_card(anton, punchline_card)
 
@@ -186,7 +186,7 @@ def test_open_punchline_card(
 def test_open_punchline_card_member_not_lead(
     lobby: Lobby, anton: Player, punchline_deck: Deck[PunchlineCard]
 ) -> None:
-    punchline_card = punchline_deck.get_random_card()
+    punchline_card = punchline_deck.get_card()
     # TODO: Use `Lead` instead of `Dealer`
     with pytest.raises(PlayerNotDealerError):
         lobby.open_punchline_card(anton, punchline_card)
@@ -196,7 +196,7 @@ def test_open_punchline_card_member_not_lead(
 def test_lobby_lead_choose_punchline_card(
     lobby: Lobby, egor: Player, anton: Player, punchline_deck: Deck[PunchlineCard]
 ) -> None:
-    punchline_card = punchline_deck.get_random_card()
+    punchline_card = punchline_deck.get_card()
     anton.punchline_cards.append(punchline_card)
     lobby.choose_punchline_card(anton, punchline_card)
     lobby.open_punchline_card(egor, punchline_card)

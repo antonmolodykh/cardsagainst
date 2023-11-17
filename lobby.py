@@ -266,7 +266,4 @@ class Lobby:
 
     def start_turn(self):
         for pl in self.all_players:
-
-            pl.observer.turn_started(
-                turn_duration=self.settings.turn_duration
-            )
+            pl.observer.turn_started(turn_duration=self.settings.turn_duration)

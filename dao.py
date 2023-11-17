@@ -21,31 +21,26 @@ setups_deck = Deck(
             starts_with_punchline=False,
         ),
         SetupCard(
-            
             text="50% всех браков заканчиваются _______.",
             case="inst",
             starts_with_punchline=False,
         ),
         SetupCard(
-            
             text="_______ — лучшее средство от запора.",
             case="nom",
             starts_with_punchline=True,
         ),
         SetupCard(
-            
             text="Я напиваюсь, чтобы не помнить о _______",
             case="prep",
             starts_with_punchline=False,
         ),
         SetupCard(
-            
             text="Я видел своего отца в слезах всего дважды: после смерти мамы и после _______",
             case="gen",
             starts_with_punchline=False,
         ),
         SetupCard(
-            
             text="Зацените! Я назвал(а) это движение «_______»",
             case="nom",
             starts_with_punchline=False,
@@ -56,7 +51,6 @@ setups_deck = Deck(
 punchlines_deck = Deck(
     cards=[
         PunchlineCard(
-            
             text={
                 "nom": "говно",
                 "gen": "говна",
@@ -67,7 +61,6 @@ punchlines_deck = Deck(
             },
         ),
         PunchlineCard(
-            
             text={
                 "nom": "Гитлер",
                 "gen": "Гитлера",
@@ -78,7 +71,6 @@ punchlines_deck = Deck(
             },
         ),
         PunchlineCard(
-            
             text={
                 "nom": "президент Татарстана",
                 "gen": "президента Татарстана",
@@ -89,7 +81,6 @@ punchlines_deck = Deck(
             },
         ),
         PunchlineCard(
-            
             text={
                 "nom": "мои яйца на твоем лице",
                 "gen": "моих яиц на твоем лице",
@@ -100,7 +91,6 @@ punchlines_deck = Deck(
             },
         ),
         PunchlineCard(
-            
             text={
                 "nom": "евреи",
                 "gen": "евреев",
@@ -111,7 +101,6 @@ punchlines_deck = Deck(
             },
         ),
         PunchlineCard(
-            
             text={
                 "nom": "секс с животными",
                 "gen": "секса с животными",
@@ -122,7 +111,6 @@ punchlines_deck = Deck(
             },
         ),
         PunchlineCard(
-            
             text={
                 "nom": "распад Югославии",
                 "gen": "распада Югославии",
@@ -133,7 +121,6 @@ punchlines_deck = Deck(
             },
         ),
         PunchlineCard(
-            
             text={
                 "nom": "настаящая работа с ДМС и соц. пакетом",
                 "gen": "настоящей работы с ДМС и соц. пакетом",
@@ -144,7 +131,6 @@ punchlines_deck = Deck(
             },
         ),
         PunchlineCard(
-            
             text={
                 "nom": "Илон Маск",
                 "gen": "Илона Маска",
@@ -155,7 +141,6 @@ punchlines_deck = Deck(
             },
         ),
         PunchlineCard(
-            
             text={
                 "nom": "Библия",
                 "gen": "Библии",
@@ -166,7 +151,6 @@ punchlines_deck = Deck(
             },
         ),
         PunchlineCard(
-            
             text={
                 "nom": "массовые убийства",
                 "gen": "массовых убийств",
@@ -177,7 +161,6 @@ punchlines_deck = Deck(
             },
         ),
         PunchlineCard(
-            
             text={
                 "nom": "Путин",
                 "gen": "Путина",
@@ -188,7 +171,6 @@ punchlines_deck = Deck(
             },
         ),
         PunchlineCard(
-            
             text={
                 "nom": "мужчины",
                 "gen": "мужчин",
@@ -199,7 +181,6 @@ punchlines_deck = Deck(
             },
         ),
         PunchlineCard(
-            
             text={
                 "nom": "моя бывшая",
                 "gen": "моей бывшей",
@@ -210,7 +191,6 @@ punchlines_deck = Deck(
             },
         ),
         PunchlineCard(
-            
             text={
                 "nom": "алкоголизм",
                 "gen": "алкоголизма",
@@ -221,7 +201,6 @@ punchlines_deck = Deck(
             },
         ),
         PunchlineCard(
-            
             text={
                 "nom": "роды в тюрьме",
                 "gen": "родов в тюрьме",
@@ -232,7 +211,6 @@ punchlines_deck = Deck(
             },
         ),
         PunchlineCard(
-            
             text={
                 "nom": "наука",
                 "gen": "науки",
@@ -243,7 +221,6 @@ punchlines_deck = Deck(
             },
         ),
         PunchlineCard(
-            
             text={
                 "nom": "большой черный член",
                 "gen": "большого черного члена",
@@ -254,7 +231,6 @@ punchlines_deck = Deck(
             },
         ),
         PunchlineCard(
-            
             text={
                 "nom": "мертвые родители",
                 "gen": "мертвых родителей",
@@ -265,7 +241,6 @@ punchlines_deck = Deck(
             },
         ),
         PunchlineCard(
-            
             text={
                 "nom": "инцест",
                 "gen": "инцеста",
