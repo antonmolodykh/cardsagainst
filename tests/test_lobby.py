@@ -9,7 +9,7 @@ from lobby import (
     LobbyObserver,
     Player,
     PlayerNotDealerError,
-    PlayerNotPunchlineCardHolderError,
+    CardNotInPlayerHandError,
     Profile,
     PunchlineCard,
     SetupCard, LobbySettings, PlayerNotOwnerError
@@ -148,10 +148,10 @@ def test_lobby_choose_punchline_card(
         observer=observer,  # FIXME: It's annoying to provide it every time
     )
     punchline_card = punchline_cards_deck.get_card()
-    anton.punchline_cards.append(punchline_card)
+    anton.hand.append(punchline_card)
     lobby.choose_punchline_card(anton, punchline_card)
     assert punchline_card is lobby.get_card_from_table(punchline_card).card
-    assert punchline_card not in anton.punchline_cards
+    assert punchline_card not in anton.hand
 
 
 def test_lobby_choose_punchline_member_not_punchline_holder(
@@ -170,8 +170,8 @@ def test_lobby_choose_punchline_member_not_punchline_holder(
         observer=observer,  # FIXME: It's annoying to provide it every time
     )
     punchline_card = punchline_cards_deck.get_card()
-    egor.punchline_cards.append(punchline_card)
-    with pytest.raises(PlayerNotPunchlineCardHolderError):
+    egor.hand.append(punchline_card)
+    with pytest.raises(CardNotInPlayerHandError):
         lobby.choose_punchline_card(anton, punchline_card)
 
 
@@ -191,7 +191,7 @@ def test_open_punchline_card(
         observer=observer,  # FIXME: It's annoying to provide it every time
     )
     punchline_card = punchline_cards_deck.get_card()
-    anton.punchline_cards.append(punchline_card)
+    anton.hand.append(punchline_card)
     lobby.choose_punchline_card(anton, punchline_card)
     lobby.open_punchline_card(egor, punchline_card)
     assert isinstance(lobby.table[0], CardOnTable)
@@ -233,7 +233,7 @@ def test_lobby_lead_choose_punchline_card(
         observer=observer,  # FIXME: It's annoying to provide it every time
     )
     punchline_card = punchline_cards_deck.get_card()
-    egor.punchline_cards.append(punchline_card)
+    egor.hand.append(punchline_card)
     lobby.choose_punchline_card(egor, punchline_card)
     lobby.open_punchline_card(anton, punchline_card)
     lobby.lead_choose_punchline_card(punchline_card)
