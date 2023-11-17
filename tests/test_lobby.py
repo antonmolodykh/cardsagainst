@@ -141,9 +141,9 @@ def test_lobby_change_setup_card(lobby: Lobby, setup_deck: Deck[SetupCard]) -> N
     assert lobby.setup_card is setup_card
 
 
-@pytest.mark.usefixtures("anton_joined")
+@pytest.mark.usefixtures("egor_connected", "anton_connected")
 def test_lobby_choose_punchline_card(
-    lobby: Lobby, anton: Player, punchline_deck: Deck[PunchlineCard]
+    lobby: Lobby, anton: Player, punchline_deck: Deck[PunchlineCard], observer: Mock
 ) -> None:
     punchline_card = punchline_deck.get_card()
     anton.hand.append(punchline_card)
@@ -157,6 +157,12 @@ def test_lobby_choose_punchline_card(
     assert not card_on_table.is_open
     assert punchline_card not in anton.hand
 
+    expected_events = [
+        call.egor.player_ready(anton),
+        call.anton.player_ready(anton),
+    ]
+    observer.assert_has_calls(expected_events, any_order=True)
+
 
 @pytest.mark.usefixtures("anton_joined")
 def test_lobby_choose_punchline_card_not_in_player_hand(
@@ -166,6 +172,10 @@ def test_lobby_choose_punchline_card_not_in_player_hand(
     egor.hand.append(punchline_card)
     with pytest.raises(CardNotInPlayerHandError):
         lobby.choose_punchline_card(anton, punchline_card)
+
+
+# TODO:
+# check turn started is sending to lead
 
 
 @pytest.mark.usefixtures("egor_connected", "anton_connected")
@@ -188,7 +198,7 @@ def test_open_punchline_card(
     assert card_on_table.is_open
 
     expected_events = [
-        observer.egor.table_card_opened(card_on_table),
+        call.egor.table_card_opened(card_on_table),
     ]
     observer.assert_has_calls(expected_events)
 
@@ -198,18 +208,26 @@ def test_open_punchline_card_member_not_lead(
     lobby: Lobby, anton: Player, punchline_deck: Deck[PunchlineCard]
 ) -> None:
     punchline_card = punchline_deck.get_card()
+    anton.hand.append(punchline_card)
+
+    # TODO: Put card on table? Method on table?
+    lobby.choose_punchline_card(anton, punchline_card)
+
     # TODO: Use `Lead` instead of `Dealer`
     with pytest.raises(PlayerNotDealerError):
-        lobby.open_punchline_card(anton, punchline_card)
+        assert isinstance(lobby.state, Judgement)
+        lobby.state.open_punchline_card(
+            anton, lobby.get_card_from_table(punchline_card)
+        )
 
 
-@pytest.mark.usefixtures("anton_joined")
+@pytest.mark.usefixtures("egor_connected", "yura_connected")
 def test_lobby_all_players_ready(
     lobby: Lobby,
     egor: Player,
     anton: Player,
     punchline_deck: Deck[PunchlineCard],
-    observer,
+    observer: Mock,
 ) -> None:
     punchline_card = punchline_deck.get_card()
     anton.hand.append(punchline_card)
@@ -218,13 +236,13 @@ def test_lobby_all_players_ready(
     assert isinstance(lobby.state, Judgement)
 
     expected_events = [
-        observer.egor.all_players_ready(),
-        observer.yura.all_players_ready(),
+        call.egor.all_players_ready(),
+        call.yura.all_players_ready(),
     ]
-    observer.assert_has_calls(expected_events)
+    observer.assert_has_calls(expected_events, any_order=True)
 
 
-@pytest.mark.usefixtures("anton_joined")
+@pytest.mark.usefixtures("egor_connected", "anton_connected")
 def test_lobby_lead_choose_punchline_card(
     lobby: Lobby,
     egor: Player,
@@ -238,12 +256,12 @@ def test_lobby_lead_choose_punchline_card(
     assert isinstance(lobby.state, Judgement)
     lobby.state.open_punchline_card(egor, lobby.get_card_from_table(punchline_card))
     expected_events = [
-        observer.egor.table_card_opened(lobby.get_card_from_table(punchline_card)),
+        call.egor.table_card_opened(lobby.get_card_from_table(punchline_card)),
     ]
     observer.assert_has_calls(expected_events)
 
 
-@pytest.mark.usefixtures("anton_joined")
+@pytest.mark.usefixtures("egor_connected", "anton_connected")
 def test_judgement_turn_ended(
     lobby: Lobby,
     egor: Player,
@@ -254,15 +272,19 @@ def test_judgement_turn_ended(
     punchline_card = punchline_deck.get_card()
     anton.hand.append(punchline_card)
     lobby.choose_punchline_card(anton, punchline_card)
-    lobby.open_punchline_card(egor, punchline_card)
 
-    lobby.lead_choose_punchline_card(punchline_card)
+    assert isinstance(lobby.state, Judgement)
+    card_on_table = lobby.get_card_from_table(punchline_card)
+    lobby.state.open_punchline_card(egor, card_on_table)
+
+    # TODO: provide `card_on_table`
+    lobby.state.pick_turn_winner(card_on_table.card)
 
     assert anton.score == 1
 
     expected_events = [
-        observer.egor.turn_ended(anton, punchline_card),
-        observer.anton.turn_ended(anton, punchline_card),
+        call.egor.turn_ended(anton, punchline_card),
+        call.anton.turn_ended(anton, punchline_card),
     ]
     observer.assert_has_calls(expected_events)
 
@@ -298,7 +320,7 @@ def test_player_disconnected(lobby: Lobby, yura: Player, observer: Mock) -> None
 
 
 @pytest.mark.usefixtures("egor_connected", "yura_connected")
-def test_owner_start_game(lobby: Lobby, egor: Player, observer: Mock) -> None:
+def test_lead_start_game(lobby: Lobby, egor: Player, observer: Mock) -> None:
     lobby_settings = LobbySettings(turn_duration=30)
     lobby.start_game(egor, lobby_settings)
 
