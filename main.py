@@ -382,7 +382,7 @@ async def websocket_endpoint(
         raise HTTPException(status_code=404)
     # TODO пренадлежность к лобби
 
-    observer = RemotePlayer(websocket=websocket)
+    observer = RemotePlayer(websocket=websocket, lobby=lobby)
     send_messages_task = asyncio.create_task(observer.send_messages())
     player.observer = observer
 

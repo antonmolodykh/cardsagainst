@@ -7,8 +7,6 @@ from uuid import uuid4
 from pydantic import BaseModel, Field
 from typing_extensions import Annotated
 
-from states import Judgement
-
 lobbies = {}
 
 
@@ -162,7 +160,7 @@ class Judgement:
             raise PlayerNotDealerError
 
         card_on_table.is_open = True
-        for pl in self.all_players:
+        for pl in self.lobby.all_players:
             pl.observer.table_card_opened(card_on_table)
 
     def pick_turn_winner(self, card) -> None:
