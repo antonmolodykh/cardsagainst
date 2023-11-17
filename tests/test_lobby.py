@@ -317,16 +317,27 @@ def test_player_disconnected(lobby: Lobby, yura: Player, observer: Mock) -> None
 
 @pytest.mark.usefixtures("egor_connected", "yura_connected")
 def test_lead_start_game(
-    lobby: Lobby, egor: Player, yura: Player, observer: Mock
+    lobby: Lobby,
+    egor: Player,
+    yura: Player,
+    observer: Mock,
+    setup_deck: Deck[SetupCard],
 ) -> None:
     lobby_settings = LobbySettings(turn_duration=30)
     lobby.start_game(egor, lobby_settings)
 
+    next_setup = setup_deck.get_card()
+    setup_deck.cards.insert(0, next_setup)
+
     expected_events = [
         call.egor.game_started(egor),
-        call.egor.turn_started(turn_duration=lobby_settings.turn_duration, lead=egor),
+        call.egor.turn_started(
+            setup=next_setup, turn_duration=lobby_settings.turn_duration, lead=egor
+        ),
         call.yura.game_started(yura),
-        call.yura.turn_started(turn_duration=lobby_settings.turn_duration, lead=egor),
+        call.yura.turn_started(
+            setup=next_setup, turn_duration=lobby_settings.turn_duration, lead=egor
+        ),
     ]
     observer.assert_has_calls(expected_events, any_order=True)
 
