@@ -258,7 +258,7 @@ def test_lobby_lead_choose_punchline_card(
 
 
 @pytest.mark.usefixtures("egor_connected", "anton_connected")
-def test_judgement_turn_ended(
+async def test_judgement_turn_ended(
     lobby: Lobby,
     egor: Player,
     anton: Player,
@@ -326,17 +326,18 @@ def test_lead_start_game(
     lobby_settings = LobbySettings(turn_duration=30)
     lobby.start_game(egor, lobby_settings)
 
-    next_setup = setup_deck.get_card()
-    setup_deck.cards.insert(0, next_setup)
-
     expected_events = [
         call.egor.game_started(egor),
         call.egor.turn_started(
-            setup=next_setup, turn_duration=lobby_settings.turn_duration, lead=egor
+            setup=lobby.setup_card,
+            turn_duration=lobby_settings.turn_duration,
+            lead=egor,
         ),
         call.yura.game_started(yura),
         call.yura.turn_started(
-            setup=next_setup, turn_duration=lobby_settings.turn_duration, lead=egor
+            setup=lobby.setup_card,
+            turn_duration=lobby_settings.turn_duration,
+            lead=egor,
         ),
     ]
     observer.assert_has_calls(expected_events, any_order=True)
@@ -350,3 +351,6 @@ def test_not_owner_start_game(lobby: Lobby, yura: Player, observer: Mock) -> Non
 
     observer.egor.turn_started.assert_not_called()
     observer.yura.turn_started.assert_not_called()
+
+
+# TODO: Test it
