@@ -7,6 +7,8 @@ from uuid import uuid4
 from pydantic import BaseModel, Field
 from typing_extensions import Annotated
 
+from states import Judgement
+
 lobbies = {}
 
 
@@ -54,6 +56,9 @@ class LobbyObserver:
     def player_ready(self, player: Player):
         pass
 
+    def turn_ended(self, winner: Player, card: PunchlineCard):
+        pass
+
 
 class Card(BaseModel):
     uuid: Annotated[uuid4, Field(default_factory=uuid4)]
@@ -81,6 +86,7 @@ class Player:
     hand: list[PunchlineCard]
     score: int = 0
     profile: Profile
+    is_ready = False
     is_connected: bool = False
 
     def __init__(self, profile: Profile) -> None:
@@ -162,7 +168,6 @@ class Lobby:
         owner: Player,
         setups: Deck[SetupCard],
         punchlines: Deck[PunchlineCard],
-        observer: LobbyObserver,
     ) -> None:
         self.players = list(players)
         self.lead = lead
@@ -172,14 +177,14 @@ class Lobby:
         self.uid = uuid4()
         self.punchlines = punchlines
         self.setups = setups
-        self.observer = observer
         self.settings = LobbySettings()
+        self.state = None
 
     @property
     def all_players(self):
         return [self.lead, *self.players]
 
-    def _all_players_except(self, player: Player):
+    def all_players_except(self, player: Player):
         return [p for p in self.all_players if p is not player]
 
     def change_owner(self) -> None:
@@ -205,6 +210,9 @@ class Lobby:
         for pl in self.all_players:
             pl.observer.player_ready(player)
 
+        if len(self.table) == len(self.players):
+            self.state = Judgement()
+
     def get_card_from_table(self, card) -> CardOnTable:
         for card_on_table in self.table:
             if card is card_on_table.card:
@@ -219,14 +227,15 @@ class Lobby:
         card_on_table.is_open = True
 
     def lead_choose_punchline_card(self, card: PunchlineCard) -> None:
-        card_on_table = self.get_card_from_table(card=card)
-        card_on_table.player.score += 1
+        if not isinstance(self.state, Judgement):
+            pass
+        self.state.lead_choose_punchline_card(card)
 
     def set_connected(self, player: Player):
         player.set_connected()
         if not self.owner:
             self.owner = player
-        for pl in self._all_players_except(player):
+        for pl in self.all_players_except(player):
             pl.observer.player_connected(player)
 
     def set_disconnected(self, player: Player):
@@ -237,7 +246,7 @@ class Lobby:
             was_owner = True
             self.change_owner()
 
-        for pl in self._all_players_except(player):
+        for pl in self.all_players_except(player):
             pl.observer.player_disconnected(player)
             if was_owner:
                 pl.observer.owner_changed(player)

@@ -76,6 +76,12 @@ class PunchlineData(ApiModel):
     text: dict[str, str]
 
 
+class TurnEndedData(ApiModel):
+    winner_uuid: str
+    card_uuid: str
+    score: int
+
+
 class GameStartedData(ApiModel):
     hand: list[PunchlineData]
 
@@ -183,6 +189,17 @@ class RemotePlayer(LobbyObserver):
     def player_ready(self, player: Player):
         self._queue.put_nowait(
             Event(id=1, type="playerReady", data=PlayerIdData(uuid=player.uuid))
+        )
+
+    def turn_ended(self, winner: Player, card: PunchlineCard):
+        self._queue.put_nowait(
+            Event(
+                id=1,
+                type="playerReady",
+                data=TurnEndedData(
+                    winner_uuid=winner.uuid, card_uuid=card.uuid.hex, score=winner.score
+                ),
+            )
         )
 
     async def send_messages(self):
