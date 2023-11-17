@@ -205,10 +205,7 @@ def test_lobby_lead_choose_punchline_card(
     assert anton.score == 1
 
     expected_events = [
-        observer.egor.turn_ended(
-            winner=anton,
-            winner_card=punchline_card
-        ),
+        observer.egor.turn_ended(anton, punchline_card),
     ]
     observer.assert_has_calls(expected_events)
 
