@@ -440,7 +440,7 @@ async def handle_event(json_data, player) -> None:
             try:
                 card = lobby.punchlines.get_card_by_uuid(event.data.uuid)
             except KeyError:
-                print('unknown card')
+                print("unknown card")
                 return
             lobby.choose_punchline_card(player, card)
         case "openTableCard":
