@@ -45,10 +45,13 @@ class LobbyObserver:
     def player_connected(self, player: Player):
         pass
 
-    def game_started(self):
+    def game_started(self, player: Player):
         pass
 
     def turn_started(self, turn_duration: int):
+        pass
+
+    def player_ready(self, player: Player):
         pass
 
 
@@ -59,7 +62,7 @@ class Card(BaseModel):
 class SetupCard(Card):
     text: str
     case: str
-    start_with_punchline: bool
+    starts_with_punchline: bool
 
 
 class PunchlineCard(Card):
@@ -114,13 +117,20 @@ class Deck(Generic[AnyCard]):
     def __init__(self, cards: list[AnyCard]) -> None:
         self.cards = cards
         self.dump = []
+        self._shuffle()
 
-    def get_random_card(self) -> AnyCard:
+    def _shuffle(self):
+        random.shuffle(self.cards)
+
+    def get_card(self) -> AnyCard:
         if not self.cards:
-            random.shuffle(self.dump)
             self.cards, self.dump = self.dump, []
+            self._shuffle()
 
-        return self.cards.pop(random.randint(0, len(self.cards) - 1))
+        return self.cards.pop()
+
+    def dump(self, card: AnyCard) -> None:
+        self.dump.append(card)
 
 
 class LobbySettings(BaseModel):
@@ -139,7 +149,7 @@ class Lobby:
     observer: LobbyObserver
     settings: LobbySettings
 
-    HAND_SIZE = 10
+    HAND_SIZE = 5
 
     def __init__(
         self,
@@ -153,7 +163,7 @@ class Lobby:
         self.players = list(players)
         self.lead = lead
         self.owner = owner
-        self.setup_card = setups.get_random_card()
+        self.setup_card = setups.get_card()
         self.table = []
         self.uid = uuid4()
         self.punchlines = punchlines
@@ -181,11 +191,18 @@ class Lobby:
     def change_setup_card(self, card: SetupCard) -> None:
         self.setup_card = card
 
-    def choose_punchline_card(self, player: Player, card: PunchlineCard) -> None:
-        if card not in player.punchline_cards:
+    def choose_punchline_card(self, player: Player, uuid: uuid4) -> None:
+        for card in player.punchline_cards:
+            if card.uuid.hex == uuid:
+                break
+        else:
             raise PlayerNotPunchlineCardHolderError
+
         self.table.append(CardOnTable(card=card, player=player))
         player.punchline_cards.remove(card)
+
+        for pl in self.all_players:
+            pl.observer.player_ready(player)
 
     def get_card_from_table(self, card) -> CardOnTable:
         for card_on_table in self.table:
@@ -242,10 +259,14 @@ class Lobby:
         self.settings = lobby_settings
         for pl in self.all_players:
             for _ in range(self.HAND_SIZE):
-                pl.add_punchline_card(self.punchlines.get_random_card())
-            pl.observer.game_started()
+                pl.add_punchline_card(self.punchlines.get_card())
+            pl.observer.game_started(pl)
+
+        self.start_turn()
+
+    def start_turn(self):
+        for pl in self.all_players:
 
             pl.observer.turn_started(
                 turn_duration=self.settings.turn_duration
             )
-
