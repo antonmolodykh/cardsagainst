@@ -84,7 +84,6 @@ def lobby(
         owner=egor,
         setups=setup_deck,
         punchlines=punchline_deck,
-        observer=observer,  # FIXME: Looks like it's redundant
     )
 
 
@@ -194,7 +193,7 @@ def test_open_punchline_card_member_not_lead(
 
 @pytest.mark.usefixtures("anton_joined")
 def test_lobby_lead_choose_punchline_card(
-    lobby: Lobby, egor: Player, anton: Player, punchline_deck: Deck[PunchlineCard]
+    lobby: Lobby, egor: Player, anton: Player, punchline_deck: Deck[PunchlineCard], observer
 ) -> None:
     punchline_card = punchline_deck.get_card()
     anton.hand.append(punchline_card)
@@ -204,6 +203,14 @@ def test_lobby_lead_choose_punchline_card(
     lobby.lead_choose_punchline_card(punchline_card)
 
     assert anton.score == 1
+
+    expected_events = [
+        observer.egor.turn_ended(
+            winner=anton,
+            winner_card=punchline_card
+        ),
+    ]
+    observer.assert_has_calls(expected_events)
 
 
 @pytest.mark.usefixtures("egor_connected")
