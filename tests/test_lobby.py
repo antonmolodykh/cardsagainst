@@ -3,6 +3,7 @@ from unittest.mock import Mock, call
 import pytest
 
 from lobby import (
+    Judgement,
     Deck,
     Lobby,
     LobbyObserver,
@@ -15,7 +16,6 @@ from lobby import (
     PunchlineCard,
     SetupCard,
 )
-from state_machine import Judgement
 
 
 @pytest.fixture
@@ -168,7 +168,7 @@ def test_lobby_choose_punchline_card_not_in_player_hand(
         lobby.choose_punchline_card(anton, punchline_card)
 
 
-@pytest.mark.usefixtures("anton_joined")
+@pytest.mark.usefixtures("egor_connected", "anton_connected")
 def test_open_punchline_card(
     lobby: Lobby,
     egor: Player,
@@ -178,15 +178,17 @@ def test_open_punchline_card(
 ) -> None:
     punchline_card = punchline_deck.get_card()
     anton.hand.append(punchline_card)
+
+    # TODO: Return from `choose_punchline_card`
     lobby.choose_punchline_card(anton, punchline_card)
 
-    lobby.open_punchline_card(egor, punchline_card)
-
+    assert isinstance(lobby.state, Judgement)
     card_on_table = lobby.get_card_from_table(punchline_card)
+    lobby.state.open_punchline_card(egor, card_on_table)
     assert card_on_table.is_open
 
     expected_events = [
-        observer.egor.table_card_opened(punchline_card),
+        observer.egor.table_card_opened(card_on_table),
     ]
     observer.assert_has_calls(expected_events)
 
@@ -233,10 +235,10 @@ def test_lobby_lead_choose_punchline_card(
     punchline_card = punchline_deck.get_card()
     anton.hand.append(punchline_card)
     lobby.choose_punchline_card(anton, punchline_card)
-    lobby.open_punchline_card(egor, punchline_card)
-
+    assert isinstance(lobby.state, Judgement)
+    lobby.state.open_punchline_card(egor, lobby.get_card_from_table(punchline_card))
     expected_events = [
-        observer.egor.table_card_opened(lobby.table[0]),
+        observer.egor.table_card_opened(lobby.get_card_from_table(punchline_card)),
     ]
     observer.assert_has_calls(expected_events)
 
@@ -301,8 +303,8 @@ def test_owner_start_game(lobby: Lobby, egor: Player, observer: Mock) -> None:
     lobby.start_game(egor, lobby_settings)
 
     expected_events = [
-        call.egor.turn_started(turn_duration=lobby_settings.turn_duration),
-        call.yura.turn_started(turn_duration=lobby_settings.turn_duration),
+        call.egor.turn_started(turn_duration=lobby_settings.turn_duration, leed=egor),
+        call.yura.turn_started(turn_duration=lobby_settings.turn_duration, leed=egor),
     ]
     observer.assert_has_calls(expected_events, any_order=True)
 
