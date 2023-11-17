@@ -48,7 +48,7 @@ class LobbyObserver:
     def game_started(self, player: Player):
         pass
 
-    def turn_started(self, turn_duration: int):
+    def turn_started(self, turn_duration: int, lead: Player):
         pass
 
     def player_ready(self, player: Player):
@@ -289,5 +289,7 @@ class Lobby:
         self.start_turn()
 
     def start_turn(self):
-        for pl in self.all_players:
-            pl.observer.turn_started(turn_duration=self.settings.turn_duration)
+        for pl in self.players:
+            pl.observer.turn_started(
+                turn_duration=self.settings.turn_duration, lead=self.lead
+            )
