@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import random
 from typing import Collection, Generic, TypeVar
 from uuid import uuid4
@@ -48,7 +49,13 @@ class LobbyObserver:
     def game_started(self, player: Player):
         pass
 
-    def turn_started(self, turn_duration: int, lead: Player):
+    def turn_started(
+        self,
+        setup: SetupCard,
+        turn_duration: int | None,
+        lead: Player,
+        card: PunchlineCard | None = None,
+    ):
         pass
 
     def player_ready(self, player: Player):
@@ -126,7 +133,7 @@ AnyCard = TypeVar("AnyCard", bound=Card)
 class Deck(Generic[AnyCard]):
     def __init__(self, cards: list[AnyCard]) -> None:
         self.cards = cards
-        self.dump = []
+        self._dump = []
         self._shuffle()
         self.mapping = {card.uuid.hex: card for card in cards}
 
@@ -138,13 +145,13 @@ class Deck(Generic[AnyCard]):
 
     def get_card(self) -> AnyCard:
         if not self.cards:
-            self.cards, self.dump = self.dump, []
+            self.cards, self._dump = self._dump, []
             self._shuffle()
 
         return self.cards.pop()
 
-    def dump(self, card: AnyCard) -> None:
-        self.dump.append(card)
+    def dump(self, cards: list[AnyCard]) -> None:
+        self._dump.extend(cards)
 
 
 class LobbySettings(BaseModel):
@@ -163,12 +170,44 @@ class Judgement:
         for pl in self.lobby.all_players:
             pl.observer.table_card_opened(card_on_table)
 
+    def start_next_turn(self):
+        previous_lead = self.lobby.lead
+        self.lobby.change_lead()
+        self.lobby.setups.dump([self.lobby.setup_card])
+
+        self.lobby.change_setup_card(self.lobby.setups.get_card())
+        for pl in self.lobby.all_players_except(previous_lead):
+            new_card = self.lobby.punchlines.get_card()
+            pl.add_punchline_card(new_card)
+            pl.observer.turn_started(
+                setup=self.lobby.setup_card,
+                turn_duration=self.lobby.settings.turn_duration,
+                lead=self.lobby.lead,
+                card=new_card,
+            )
+        previous_lead.observer.turn_started(
+            setup=self.lobby.setup_card,
+            turn_duration=self.lobby.settings.turn_duration,
+            lead=self.lobby.lead,
+        )
+
     def pick_turn_winner(self, card) -> None:
         card_on_table = self.lobby.get_card_from_table(card=card)
         card_on_table.player.score += 1
 
         for pl in self.lobby.all_players:
             pl.observer.turn_ended(card_on_table.player, card)
+
+        self.lobby.punchlines.dump(
+            [card_in_table.card for card_in_table in self.lobby.table]
+        )
+        self.lobby.table = []
+
+        async def start_turn():
+            await asyncio.sleep(3)
+            self.start_next_turn()
+
+        asyncio.create_task(start_turn())
 
 
 class Lobby:
@@ -286,10 +325,12 @@ class Lobby:
                 pl.add_punchline_card(self.punchlines.get_card())
             pl.observer.game_started(pl)
 
-        self.start_turn()
+        self.start_first_turn()
 
-    def start_turn(self):
+    def start_first_turn(self):
         for pl in self.all_players:
             pl.observer.turn_started(
-                turn_duration=self.settings.turn_duration, lead=self.lead
+                setup=self.setup_card,
+                turn_duration=self.settings.turn_duration,
+                lead=self.lead,
             )

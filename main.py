@@ -72,6 +72,13 @@ class PlayerIdData(ApiModel):
     uuid: str
 
 
+class SetupData(ApiModel):
+    uuid: str
+    text: str
+    case: str
+    starts_with_punchline: bool
+
+
 class PunchlineData(ApiModel):
     uuid: str
     text: dict[str, str]
@@ -190,15 +197,28 @@ class RemotePlayer(LobbyObserver):
             )
         )
 
-    def turn_started(self, turn_duration: int | None, lead: Player):
+    def turn_started(
+        self,
+        setup: SetupCard,
+        turn_duration: int | None,
+        lead: Player,
+        card: PunchlineCard | None = None,
+    ):
         self._queue.put_nowait(
             Event(
                 id=1,
                 type="turnStarted",
                 data=TurnStartedData(
+                    setup=SetupData(
+                        uuid=setup.uuid.hex,
+                        text=setup.text,
+                        case=setup.case,
+                        starts_with_punchline=setup.starts_with_punchline,
+                    ),
                     timeout=turn_duration,
                     lead_uuid=lead.uuid,
                     is_leading=self.player is lead,
+                    card=PunchlineData.from_card(card) if card else None,
                 ),
             )
         )
@@ -212,7 +232,7 @@ class RemotePlayer(LobbyObserver):
         self._queue.put_nowait(
             Event(
                 id=1,
-                type="playerReady",
+                type="tableCardOpened",
                 data=TableCardOpenedData(
                     index=self.lobby.table.index(card_on_table),
                     card=PunchlineData.from_card(card_on_table.card),
@@ -237,8 +257,9 @@ class RemotePlayer(LobbyObserver):
     async def send_messages(self):
         while True:
             event = await self._queue.get()
-            print(f"Event: {event}")
-            await self.websocket.send_json(event.model_dump(by_alias=True))
+            data = event.model_dump(by_alias=True)
+            print(f"Event: {data}")
+            await self.websocket.send_json(data)
 
 
 broadcast_observer = BroadcastObserver()
@@ -319,9 +340,11 @@ class PickTurnWinnerData(ApiModel):
 
 
 class TurnStartedData(ApiModel):
+    setup: SetupData
     timeout: int | None
     lead_uuid: str
     is_leading: bool
+    card: PunchlineData | None = None
 
 
 class LobbyState(ApiModel):
@@ -373,7 +396,7 @@ async def connect(
             punchlines=punchlines,
         )
     return ConnectResponse(
-        host="wss://c9gws36c-9999.euw.devtunnels.ms/connect",
+        host="ws://192.168.0.12:9999/connect",
         player_token=player_token,
         lobby_token="boba",
     )
@@ -416,9 +439,8 @@ async def websocket_endpoint(
     while True:
         try:
             json_data = await websocket.receive_json()
-
+            print(f"Received event: {json_data}")
             await handle_event(json_data, player)
-            # print(f"Received data: {json_data}")
         except WebSocketDisconnect:
             send_messages_task.cancel()
             lobby.set_disconnected(player)
