@@ -148,8 +148,9 @@ class BroadcastObserver(LobbyObserver):
 
 
 class RemotePlayer(LobbyObserver):
-    def __init__(self, websocket: WebSocket, lobby: Lobby) -> None:
+    def __init__(self, websocket: WebSocket, player: Player, lobby: Lobby) -> None:
         self.lobby = lobby
+        self.player = player
         self.websocket = websocket
         self._queue = asyncio.Queue()
 
@@ -189,9 +190,17 @@ class RemotePlayer(LobbyObserver):
             )
         )
 
-    def turn_started(self, turn_duration: int | None):
+    def turn_started(self, turn_duration: int | None, lead: Player):
         self._queue.put_nowait(
-            Event(id=1, type="turnStarted", data=TurnStartedData(timeout=turn_duration))
+            Event(
+                id=1,
+                type="turnStarted",
+                data=TurnStartedData(
+                    timeout=turn_duration,
+                    lead_uuid=lead.uuid,
+                    is_leading=self.player is lead,
+                ),
+            )
         )
 
     def player_ready(self, player: Player):
@@ -311,6 +320,8 @@ class PickTurnWinnerData(ApiModel):
 
 class TurnStartedData(ApiModel):
     timeout: int | None
+    lead_uuid: str
+    is_leading: bool
 
 
 class LobbyState(ApiModel):
@@ -382,7 +393,7 @@ async def websocket_endpoint(
         raise HTTPException(status_code=404)
     # TODO пренадлежность к лобби
 
-    observer = RemotePlayer(websocket=websocket)
+    observer = RemotePlayer(websocket=websocket, lobby=lobby)
     send_messages_task = asyncio.create_task(observer.send_messages())
     player.observer = observer
 
