@@ -10,7 +10,7 @@ from typing_extensions import Annotated
 lobbies = {}
 
 
-class PlayerNotPunchlineCardHolderError(Exception):
+class CardNotInPlayerHandError(Exception):
     pass
 
 
@@ -78,14 +78,14 @@ class Profile(BaseModel):
 class Player:
     observer: LobbyObserver
     uuid: str
-    punchline_cards: list[PunchlineCard]
+    hand: list[PunchlineCard]
     score: int = 0
     profile: Profile
     is_connected: bool = False
 
     def __init__(self, profile: Profile) -> None:
         self.profile = profile
-        self.punchline_cards = []
+        self.hand = []
         self.uuid = uuid4().hex
         self.observer = LobbyObserver()
 
@@ -97,7 +97,7 @@ class Player:
         self.is_connected = False
 
     def add_punchline_card(self, card: PunchlineCard):
-        self.punchline_cards.append(card)
+        self.hand.append(card)
 
 
 class CardOnTable:
@@ -118,6 +118,10 @@ class Deck(Generic[AnyCard]):
         self.cards = cards
         self.dump = []
         self._shuffle()
+        self.mapping = {card.uuid: card for card in cards}
+
+    def get_card_by_uuid(self, card_uuid):
+        return self.mapping[card_uuid]
 
     def _shuffle(self):
         random.shuffle(self.cards)
@@ -191,15 +195,12 @@ class Lobby:
     def change_setup_card(self, card: SetupCard) -> None:
         self.setup_card = card
 
-    def choose_punchline_card(self, player: Player, uuid: uuid4) -> None:
-        for card in player.punchline_cards:
-            if card.uuid.hex == uuid:
-                break
-        else:
-            raise PlayerNotPunchlineCardHolderError
+    def choose_punchline_card(self, player: Player, card: PunchlineCard) -> None:
+        if card not in player.hand:
+            raise CardNotInPlayerHandError
 
         self.table.append(CardOnTable(card=card, player=player))
-        player.punchline_cards.remove(card)
+        player.hand.remove(card)
 
         for pl in self.all_players:
             pl.observer.player_ready(player)

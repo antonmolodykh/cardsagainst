@@ -15,16 +15,7 @@ from typing_extensions import Annotated
 from fastapi.middleware.cors import CORSMiddleware
 
 from dao import cards_dao
-from lobby import (
-    Lobby,
-    Player,
-    Profile,
-    Deck,
-    SetupCard,
-    PunchlineCard,
-    LobbyObserver,
-    LobbySettings,
-)
+from lobby import Lobby, Player, Profile, Deck, SetupCard, PunchlineCard, LobbyObserver, LobbySettings
 
 lobby: Lobby = None
 observers: list[LobbyObserver] = []
@@ -167,11 +158,8 @@ class RemotePlayer(LobbyObserver):
                 id=1,
                 type="gameStarted",
                 data=GameStartedData(
-                    hand=[
-                        PunchlineData(uuid=item.uuid.hex, text=item.text)
-                        for item in player.punchline_cards
-                    ]
-                ),
+                    hand=[PunchlineData(uuid=item.uuid.hex, text=item.text) for item in player.hand]
+                )
             )
         )
 
@@ -303,8 +291,8 @@ async def connect(
     if lobby_token:
         lobby.add_player(player)
     else:
-        setups = cards_dao.get_setups(deck_id="one")
-        punchlines = cards_dao.get_punchlines(deck_id="one")
+        setups = cards_dao.get_setups(deck_id='one')
+        punchlines = cards_dao.get_punchlines(deck_id='one')
 
         lobby = Lobby(
             players=[],
@@ -359,23 +347,31 @@ async def websocket_endpoint(
         try:
             json_data = await websocket.receive_json()
 
-            match json_data["type"]:
-                case "startGame":
-                    event = Event[StartGameData].model_validate(json_data)
-                    lobby.start_game(
-                        player=player,
-                        lobby_settings=LobbySettings(turn_duration=event.data.timeout),
-                    )
-                case "makeTurn":
-                    event = Event[MakeTurnData].model_validate(json_data)
-                    lobby.choose_punchline_card(player, event.data.uuid)
-            print(f"Received data: {json_data}")
+            await handle_event(json_data, player)
+            # print(f"Received data: {json_data}")
         except WebSocketDisconnect:
             send_messages_task.cancel()
             lobby.set_disconnected(player)
             break
         except Exception:
             print(f"Unexpected error: {traceback.format_exc()}")
+
+
+async def handle_event(json_data, player) -> None:
+    match json_data['type']:
+        case 'startGame':
+            event = Event[StartGameData].model_validate(json_data)
+            lobby.start_game(
+                player=player,
+                lobby_settings=LobbySettings(turn_duration=event.data.timeout)
+            )
+        case 'makeTurn':
+            event = Event[MakeTurnData].model_validate(json_data)
+            try:
+                card = lobby.punchlines.get_card_by_uuid(event.data.uuid)
+            except KeyError:
+                return
+            lobby.choose_punchline_card(player, card)
 
 
 @app.get("/")
