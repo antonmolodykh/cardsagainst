@@ -24,6 +24,7 @@ from lobby import (
     PunchlineCard,
     LobbyObserver,
     LobbySettings,
+    CardOnTable,
 )
 
 lobby: Lobby = None
@@ -74,6 +75,15 @@ class PlayerIdData(ApiModel):
 class PunchlineData(ApiModel):
     uuid: str
     text: dict[str, str]
+
+    @classmethod
+    def from_card(cls, card: PunchlineCard):
+        return cls(uuid=card.uuid.hex, text=card.text)
+
+
+class TableCardOpenedData(ApiModel):
+    index: int
+    card: PunchlineData
 
 
 class TurnEndedData(ApiModel):
@@ -138,7 +148,8 @@ class BroadcastObserver(LobbyObserver):
 
 
 class RemotePlayer(LobbyObserver):
-    def __init__(self, websocket: WebSocket) -> None:
+    def __init__(self, websocket: WebSocket, lobby: Lobby) -> None:
+        self.lobby = lobby
         self.websocket = websocket
         self._queue = asyncio.Queue()
 
@@ -173,10 +184,7 @@ class RemotePlayer(LobbyObserver):
                 id=1,
                 type="gameStarted",
                 data=GameStartedData(
-                    hand=[
-                        PunchlineData(uuid=item.uuid.hex, text=item.text)
-                        for item in player.hand
-                    ]
+                    hand=[PunchlineData.from_card(item) for item in player.hand]
                 ),
             )
         )
@@ -191,16 +199,31 @@ class RemotePlayer(LobbyObserver):
             Event(id=1, type="playerReady", data=PlayerIdData(uuid=player.uuid))
         )
 
-    def turn_ended(self, winner: Player, card: PunchlineCard):
+    def table_card_opened(self, card_on_table: CardOnTable):
         self._queue.put_nowait(
             Event(
                 id=1,
                 type="playerReady",
+                data=TableCardOpenedData(
+                    index=self.lobby.table.index(card_on_table),
+                    card=PunchlineData.from_card(card_on_table.card),
+                ),
+            )
+        )
+
+    def turn_ended(self, winner: Player, card: PunchlineCard):
+        self._queue.put_nowait(
+            Event(
+                id=1,
+                type="turnEnded",
                 data=TurnEndedData(
                     winner_uuid=winner.uuid, card_uuid=card.uuid.hex, score=winner.score
                 ),
             )
         )
+
+    def all_players_ready(self):
+        self._queue.put_nowait(Event(id=1, type="allPlayersReady", data=None))
 
     async def send_messages(self):
         while True:
@@ -278,6 +301,14 @@ class MakeTurnData(ApiModel):
     uuid: str
 
 
+class OpenTableCardData(ApiModel):
+    index: int
+
+
+class PickTurnWinnerData(ApiModel):
+    uuid: str
+
+
 class TurnStartedData(ApiModel):
     timeout: int | None
 
@@ -329,7 +360,6 @@ async def connect(
             owner=player,
             setups=setups,
             punchlines=punchlines,
-            observer=broadcast_observer,
         )
     return ConnectResponse(
         host="wss://c9gws36c-9999.euw.devtunnels.ms/connect",
@@ -401,6 +431,16 @@ async def handle_event(json_data, player) -> None:
             except KeyError:
                 return
             lobby.choose_punchline_card(player, card)
+        case "openTableCard":
+            event = Event[OpenTableCardData].model_validate(json_data)
+            lobby.state.open_punchline_card(player, lobby.table[event.data.index])
+        case "pickTurnWinner":
+            event = Event[PickTurnWinnerData].model_validate(json_data)
+            try:
+                card = lobby.punchlines.get_card_by_uuid(event.data.uuid)
+            except KeyError:
+                return
+            lobby.state.pick_turn_winner(card)
 
 
 @app.get("/")

@@ -56,7 +56,13 @@ class LobbyObserver:
     def player_ready(self, player: Player):
         pass
 
+    def table_card_opened(self, card_on_table: CardOnTable):
+        pass
+
     def turn_ended(self, winner: Player, card: PunchlineCard):
+        pass
+
+    def all_players_ready(self):
         pass
 
 
@@ -147,6 +153,26 @@ class LobbySettings(BaseModel):
     turn_duration: int | None = 20
 
 
+class Judgement:
+    def __init__(self, lobby: Lobby):
+        self.lobby = lobby
+
+    def open_punchline_card(self, player: Player, card_on_table: CardOnTable) -> None:
+        if self.lobby.lead is not player:
+            raise PlayerNotDealerError
+
+        card_on_table.is_open = True
+        for pl in self.all_players:
+            pl.observer.table_card_opened(card_on_table)
+
+    def pick_turn_winner(self, card) -> None:
+        card_on_table = self.lobby.get_card_from_table(card=card)
+        card_on_table.player.score += 1
+
+        for pl in self.lobby.all_players:
+            pl.observer.turn_ended(card_on_table.player, card)
+
+
 class Lobby:
     uid: uuid4
     players: list[Player]
@@ -211,25 +237,15 @@ class Lobby:
             pl.observer.player_ready(player)
 
         if len(self.table) == len(self.players):
-            self.state = Judgement()
+            self.state = Judgement(self)
+            for pl in self.all_players:
+                pl.observer.all_players_ready()
 
     def get_card_from_table(self, card) -> CardOnTable:
         for card_on_table in self.table:
             if card is card_on_table.card:
                 return card_on_table
         raise NotImplemented
-
-    def open_punchline_card(self, player: Player, card: PunchlineCard) -> None:
-        if self.lead is not player:
-            raise PlayerNotDealerError
-
-        card_on_table = self.get_card_from_table(card=card)
-        card_on_table.is_open = True
-
-    def lead_choose_punchline_card(self, card: PunchlineCard) -> None:
-        if not isinstance(self.state, Judgement):
-            pass
-        self.state.lead_choose_punchline_card(card)
 
     def set_connected(self, player: Player):
         player.set_connected()
