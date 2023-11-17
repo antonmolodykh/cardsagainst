@@ -174,10 +174,6 @@ def test_lobby_choose_punchline_card_not_in_player_hand(
         lobby.choose_punchline_card(anton, punchline_card)
 
 
-# TODO:
-# check turn started is sending to lead
-
-
 @pytest.mark.usefixtures("egor_connected", "anton_connected")
 def test_open_punchline_card(
     lobby: Lobby,
