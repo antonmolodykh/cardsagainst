@@ -10,7 +10,7 @@ from lobby import (
     Player,
     PlayerNotDealerError,
     PlayerNotOwnerError,
-    PlayerNotPunchlineCardHolderError,
+    CardNotInPlayerHandError,
     Profile,
     PunchlineCard,
     SetupCard,
@@ -146,7 +146,7 @@ def test_lobby_choose_punchline_card(
     lobby: Lobby, anton: Player, punchline_deck: Deck[PunchlineCard]
 ) -> None:
     punchline_card = punchline_deck.get_card()
-    anton.punchline_cards.append(punchline_card)
+    anton.hand.append(punchline_card)
     # TODO: Maybe move this method to player?
 
     lobby.choose_punchline_card(anton, punchline_card)
@@ -155,16 +155,16 @@ def test_lobby_choose_punchline_card(
     assert card_on_table.card is punchline_card
     assert card_on_table.player is anton
     assert not card_on_table.is_open
-    assert punchline_card not in anton.punchline_cards
+    assert punchline_card not in anton.hand
 
 
 @pytest.mark.usefixtures("anton_joined")
-def test_lobby_choose_punchline_member_not_punchline_holder(
+def test_lobby_choose_punchline_card_not_in_player_hand(
     lobby: Lobby, egor: Player, anton: Player, punchline_deck: Deck[PunchlineCard]
 ) -> None:
     punchline_card = punchline_deck.get_card()
-    egor.punchline_cards.append(punchline_card)
-    with pytest.raises(PlayerNotPunchlineCardHolderError):
+    egor.hand.append(punchline_card)
+    with pytest.raises(CardNotInPlayerHandError):
         lobby.choose_punchline_card(anton, punchline_card)
 
 
@@ -173,7 +173,7 @@ def test_open_punchline_card(
     lobby: Lobby, egor: Player, anton: Player, punchline_deck: Deck[PunchlineCard]
 ) -> None:
     punchline_card = punchline_deck.get_card()
-    anton.punchline_cards.append(punchline_card)
+    anton.hand.append(punchline_card)
     lobby.choose_punchline_card(anton, punchline_card)
 
     lobby.open_punchline_card(egor, punchline_card)
@@ -197,7 +197,7 @@ def test_lobby_lead_choose_punchline_card(
     lobby: Lobby, egor: Player, anton: Player, punchline_deck: Deck[PunchlineCard]
 ) -> None:
     punchline_card = punchline_deck.get_card()
-    anton.punchline_cards.append(punchline_card)
+    anton.hand.append(punchline_card)
     lobby.choose_punchline_card(anton, punchline_card)
     lobby.open_punchline_card(egor, punchline_card)
 
