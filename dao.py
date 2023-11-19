@@ -66,13 +66,28 @@ setups_deck = Deck(
             starts_with_punchline=False,
         ),
         SetupCard(
-            text="Как говорил мой дед: «Я твой _______.»",
+            text="Как говорил мой дед: «Я твой _________.»",
             case="nom",
             starts_with_punchline=False,
         ),
         SetupCard(
             text="В детстве я, конечно, мечтал(а) стать _________",
             case="inst",
+            starts_with_punchline=False,
+        ),
+        SetupCard(
+            text="Читали новую книгу Джоан Роулинг? «Гарри Поттер и _________»",
+            case="nom",
+            starts_with_punchline=True,
+        ),
+        SetupCard(
+            text="Пять стадий горя: отрицание, гнев, торг, _________, принятие.",
+            case="nom",
+            starts_with_punchline=False,
+        ),
+        SetupCard(
+            text="В 2150 году предизентом России будет _________",
+            case="nom",
             starts_with_punchline=False,
         ),
     ]
