@@ -47,7 +47,7 @@ setups_deck = Deck(
         ),
         SetupCard(
             text="Перед тем как я убью вас, мистер Бонд, я хочу показать вам _________.",
-            case="nom",
+            case="acc",
             starts_with_punchline=False,
         ),
         SetupCard(
