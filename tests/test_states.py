@@ -29,8 +29,7 @@ def test_transit_judgement_to_turns(
     setup_deck: Deck[SetupCard],
 ) -> None:
     setup_card = setup_deck.get_card()
-    next_setup_card = setup_deck.get_card()
-    setup_deck.cards.insert(0, next_setup_card)
+    next_setup_card = setup_deck.cards[-1]
     lobby.add_player(anton)
     lobby.transit_to(Judgement(setup_card))
     lobby.state.start_turn()

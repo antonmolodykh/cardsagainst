@@ -166,6 +166,21 @@ class State:
             f"method `choose_punchline_card` not expected in state {type(self).__name__}"
         )
 
+    def open_punchline_card(self, player: Player, card_on_table: CardOnTable) -> None:
+        raise Exception(
+            f"method `open_punchline_card` not expected in state {type(self).__name__}"
+        )
+
+    def start_turn(self):
+        raise Exception(
+            f"method `pick_turn_winner` not expected in state {type(self).__name__}"
+        )
+
+    def pick_turn_winner(self, card: PunchlineCard):
+        raise Exception(
+            f"method `pick_turn_winner` not expected in state {type(self).__name__}"
+        )
+
 
 class Gathering(State):
     def start_game(self, player: Player, lobby_settings: LobbySettings) -> None:
@@ -181,16 +196,21 @@ class Gathering(State):
         self.start_turn()
 
     def start_turn(self):
-        self.lobby.transit_to(Turns())
+        new_setup = self.lobby.setups.get_card()
+        self.lobby.transit_to(Turns(new_setup))
         for pl in self.lobby.all_players:
             pl.observer.turn_started(
-                setup=self.lobby.setup_card,
+                setup=new_setup,
                 turn_duration=self.lobby.settings.turn_duration,
                 lead=self.lobby.lead,
             )
 
 
 class Turns(State):
+
+    def __init__(self, setup: SetupCard):
+        self.setup = setup
+
     def choose_punchline_card(self, player: Player, card: PunchlineCard) -> None:
         if card not in player.hand:
             raise CardNotInPlayerHandError
@@ -202,12 +222,15 @@ class Turns(State):
             pl.observer.player_ready(player)
 
         if len(self.lobby.table) == len(self.lobby.players):
-            self.lobby.transit_to(Judgement())
+            self.lobby.transit_to(Judgement(self.setup))
             for pl in self.lobby.all_players:
                 pl.observer.all_players_ready()
 
 
 class Judgement(State):
+    def __init__(self, setup: SetupCard):
+        self.setup = setup
+
     def open_punchline_card(self, player: Player, card_on_table: CardOnTable) -> None:
         if self.lobby.lead is not player:
             raise PlayerNotDealerError
@@ -215,27 +238,6 @@ class Judgement(State):
         card_on_table.is_open = True
         for pl in self.lobby.all_players:
             pl.observer.table_card_opened(card_on_table)
-
-    def start_next_turn(self):
-        previous_lead = self.lobby.lead
-        self.lobby.change_lead()
-        self.lobby.setups.dump([self.lobby.setup_card])
-
-        self.lobby.change_setup_card(self.lobby.setups.get_card())
-        for pl in self.lobby.all_players_except(previous_lead):
-            new_card = self.lobby.punchlines.get_card()
-            pl.add_punchline_card(new_card)
-            pl.observer.turn_started(
-                setup=self.lobby.setup_card,
-                turn_duration=self.lobby.settings.turn_duration,
-                lead=self.lobby.lead,
-                card=new_card,
-            )
-        previous_lead.observer.turn_started(
-            setup=self.lobby.setup_card,
-            turn_duration=self.lobby.settings.turn_duration,
-            lead=self.lobby.lead,
-        )
 
     def pick_turn_winner(self, card) -> None:
         card_on_table = self.lobby.get_card_from_table(card=card)
@@ -251,9 +253,31 @@ class Judgement(State):
 
         async def start_turn():
             await asyncio.sleep(5)
-            self.start_next_turn()
+            self.start_turn()
 
         asyncio.create_task(start_turn())
+
+    def start_turn(self):
+        previous_lead = self.lobby.lead
+        self.lobby.change_lead()
+        self.lobby.setups.dump([self.setup])
+
+        new_setup = self.lobby.setups.get_card()
+        self.lobby.transit_to(Turns(new_setup))
+        for pl in self.lobby.all_players_except(previous_lead):
+            new_card = self.lobby.punchlines.get_card()
+            pl.add_punchline_card(new_card)
+            pl.observer.turn_started(
+                setup=new_setup,
+                turn_duration=self.lobby.settings.turn_duration,
+                lead=self.lobby.lead,
+                card=new_card,
+            )
+        previous_lead.observer.turn_started(
+            setup=new_setup,
+            turn_duration=self.lobby.settings.turn_duration,
+            lead=self.lobby.lead,
+        )
 
 
 class Lobby:
@@ -261,7 +285,6 @@ class Lobby:
     players: list[Player]
     lead: Player
     owner: Player | None
-    setup_card: SetupCard
     table: list[CardOnTable]
     punchlines: Deck[PunchlineCard]
     setups: Deck[SetupCard]
@@ -282,7 +305,6 @@ class Lobby:
         self.players = list(players)
         self.lead = lead
         self.owner = owner
-        self.setup_card = setups.get_card()
         self.table = []
         self.uid = uuid4()
         self.punchlines = punchlines
@@ -311,9 +333,6 @@ class Lobby:
     def change_lead(self) -> None:
         self.players.append(self.lead)
         self.lead = self.players.pop(0)
-
-    def change_setup_card(self, card: SetupCard) -> None:
-        self.setup_card = card
 
     def get_card_from_table(self, card) -> CardOnTable:
         for card_on_table in self.table:
