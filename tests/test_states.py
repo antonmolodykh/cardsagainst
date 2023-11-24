@@ -24,4 +24,3 @@ def test_transit_judgement_to_turns(
     lobby.transit_to(Judgement())
     lobby.state.start_turn()
     assert isinstance(lobby.state, Turns)
-    # asd
