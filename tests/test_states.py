@@ -15,3 +15,12 @@ def test_transit_turns_to_judgement(
     lobby.transit_to(Turns())
     lobby.state.choose_punchline_card(anton, punchline_card)
     assert isinstance(lobby.state, Judgement)
+
+
+def test_transit_judgement_to_turns(
+    lobby: Lobby, anton: Player, punchline_deck: Deck[PunchlineCard]
+) -> None:
+    lobby.add_player(anton)
+    lobby.transit_to(Judgement())
+    lobby.state.start_turn()
+    assert isinstance(lobby.state, Turns)
