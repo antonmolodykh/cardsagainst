@@ -60,7 +60,7 @@ def yura() -> Player:
 
 
 @pytest.fixture
-def state_gathering() -> Gathering:
+def state_gathering(lobby) -> Gathering:
     return Gathering()
 
 
@@ -72,7 +72,7 @@ def lobby(
     observer: Mock,
     state_gathering: Gathering,
 ) -> Lobby:
-    return Lobby(
+    lobby = Lobby(
         players=[],
         lead=egor,
         owner=egor,
@@ -82,6 +82,8 @@ def lobby(
         setups=setup_deck,
         punchlines=punchline_deck,
     )
+    state_gathering.lobby = lobby
+    return lobby
 
 
 @pytest.fixture
