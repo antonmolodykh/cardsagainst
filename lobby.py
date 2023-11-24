@@ -162,11 +162,12 @@ class State:
     lobby: Lobby
 
     def choose_punchline_card(self, player: Player, card: PunchlineCard):
-        raise Exception(f'method `choose_punchline_card` not expected in state {type(self).__name__}')
+        raise Exception(
+            f"method `choose_punchline_card` not expected in state {type(self).__name__}"
+        )
 
 
 class Gathering(State):
-
     def start_game(self, player: Player, lobby_settings: LobbySettings) -> None:
         if player is not self.lobby.owner:
             raise PlayerNotOwnerError
@@ -190,7 +191,6 @@ class Gathering(State):
 
 
 class Turns(State):
-
     def choose_punchline_card(self, player: Player, card: PunchlineCard) -> None:
         if card not in player.hand:
             raise CardNotInPlayerHandError
@@ -208,7 +208,6 @@ class Turns(State):
 
 
 class Judgement(State):
-
     def open_punchline_card(self, player: Player, card_on_table: CardOnTable) -> None:
         if self.lobby.lead is not player:
             raise PlayerNotDealerError
