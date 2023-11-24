@@ -60,7 +60,7 @@ def yura() -> Player:
 
 
 @pytest.fixture
-def state_gathering(lobby) -> Gathering:
+def state_gathering() -> Gathering:
     return Gathering()
 
 
