@@ -82,7 +82,6 @@ def lobby(
         setups=setup_deck,
         punchlines=punchline_deck,
     )
-    state_gathering.lobby = lobby
     return lobby
 
 
