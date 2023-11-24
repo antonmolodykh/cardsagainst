@@ -158,12 +158,14 @@ class LobbySettings(BaseModel):
     turn_duration: int | None = 20
 
 
-class Turns:
-    pass
-
-
-class Gathering:
+class State:
     lobby: Lobby
+
+    def choose_punchline_card(self, player: Player, card: PunchlineCard):
+        raise Exception(f'method `choose_punchline_card` not expected in state {type(self).__name__}')
+
+
+class Gathering(State):
 
     def start_game(self, player: Player, lobby_settings: LobbySettings) -> None:
         if player is not self.lobby.owner:
@@ -178,7 +180,7 @@ class Gathering:
         self.start_turn()
 
     def start_turn(self):
-        self.lobby.state = Turns()
+        self.lobby.transit_to(Turns())
         for pl in self.lobby.all_players:
             pl.observer.turn_started(
                 setup=self.lobby.setup_card,
@@ -187,9 +189,25 @@ class Gathering:
             )
 
 
-class Judgement:
-    def __init__(self, lobby: Lobby):
-        self.lobby = lobby
+class Turns(State):
+
+    def choose_punchline_card(self, player: Player, card: PunchlineCard) -> None:
+        if card not in player.hand:
+            raise CardNotInPlayerHandError
+
+        self.lobby.table.append(CardOnTable(card=card, player=player))
+        player.hand.remove(card)
+
+        for pl in self.lobby.all_players:
+            pl.observer.player_ready(player)
+
+        if len(self.lobby.table) == len(self.lobby.players):
+            self.lobby.transit_to(Judgement())
+            for pl in self.lobby.all_players:
+                pl.observer.all_players_ready()
+
+
+class Judgement(State):
 
     def open_punchline_card(self, player: Player, card_on_table: CardOnTable) -> None:
         if self.lobby.lead is not player:
@@ -287,27 +305,16 @@ class Lobby:
             if player.is_connected:
                 self.owner = player
 
+    def transit_to(self, new_state: State) -> None:
+        self.state = new_state
+        self.state.lobby = self
+
     def change_lead(self) -> None:
         self.players.append(self.lead)
         self.lead = self.players.pop(0)
 
     def change_setup_card(self, card: SetupCard) -> None:
         self.setup_card = card
-
-    def choose_punchline_card(self, player: Player, card: PunchlineCard) -> None:
-        if card not in player.hand:
-            raise CardNotInPlayerHandError
-
-        self.table.append(CardOnTable(card=card, player=player))
-        player.hand.remove(card)
-
-        for pl in self.all_players:
-            pl.observer.player_ready(player)
-
-        if len(self.table) == len(self.players):
-            self.state = Judgement(self)
-            for pl in self.all_players:
-                pl.observer.all_players_ready()
 
     def get_card_from_table(self, card) -> CardOnTable:
         for card_on_table in self.table:
