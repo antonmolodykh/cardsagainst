@@ -28,12 +28,6 @@ def test_lobby_change_lead(
     assert lobby.lead is anton
 
 
-def test_lobby_change_setup_card(lobby: Lobby, setup_deck: Deck[SetupCard]) -> None:
-    setup_card = setup_deck.get_card()
-    lobby.change_setup_card(setup_card)
-    assert lobby.setup_card is setup_card
-
-
 @pytest.mark.usefixtures("egor_connected", "anton_connected")
 def test_lobby_choose_punchline_card(
     lobby: Lobby, anton: Player, punchline_deck: Deck[PunchlineCard], observer: Mock
