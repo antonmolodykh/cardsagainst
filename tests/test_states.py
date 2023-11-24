@@ -19,6 +19,7 @@ def test_transit_turns_to_judgement(
     lobby.transit_to(Turns(setup_card))
     lobby.state.choose_punchline_card(anton, punchline_card)
     assert isinstance(lobby.state, Judgement)
+    assert lobby.state.setup is setup_card
 
 
 def test_transit_judgement_to_turns(
@@ -28,7 +29,10 @@ def test_transit_judgement_to_turns(
     setup_deck: Deck[SetupCard],
 ) -> None:
     setup_card = setup_deck.get_card()
+    next_setup_card = setup_deck.get_card()
+    setup_deck.cards.insert(0, next_setup_card)
     lobby.add_player(anton)
     lobby.transit_to(Judgement(setup_card))
     lobby.state.start_turn()
     assert isinstance(lobby.state, Turns)
+    assert lobby.state.setup is next_setup_card
