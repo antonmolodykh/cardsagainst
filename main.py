@@ -454,7 +454,7 @@ async def handle_event(json_data, player) -> None:
     match json_data["type"]:
         case "startGame":
             event = Event[StartGameData].model_validate(json_data)
-            lobby.start_game(
+            lobby.state.start_game(
                 player=player,
                 lobby_settings=LobbySettings(turn_duration=event.data.timeout),
             )
@@ -465,7 +465,7 @@ async def handle_event(json_data, player) -> None:
             except KeyError:
                 print("unknown card")
                 return
-            lobby.choose_punchline_card(player, card)
+            lobby.state.choose_punchline_card(player, card)
         case "openTableCard":
             event = Event[OpenTableCardData].model_validate(json_data)
             lobby.state.open_punchline_card(player, lobby.table[event.data.index])
