@@ -60,16 +60,25 @@ def yura() -> Player:
 
 
 @pytest.fixture
+def state_gathering() -> Gathering:
+    return Gathering()
+
+
+@pytest.fixture
 def lobby(
     egor: Player,
     setup_deck: Deck[SetupCard],
     punchline_deck: Deck[PunchlineCard],
     observer: Mock,
+    state_gathering: Gathering,
 ) -> Lobby:
     return Lobby(
         players=[],
         lead=egor,
         owner=egor,
+        state=state_gathering,
+        # TODO: state gathering determines the setups and punchlines
+        # Move?
         setups=setup_deck,
         punchlines=punchline_deck,
     )
