@@ -2,7 +2,16 @@ from unittest.mock import Mock
 
 import pytest
 
-from lobby import Deck, Lobby, LobbyObserver, Player, Profile, PunchlineCard, SetupCard
+from lobby import (
+    Deck,
+    Lobby,
+    LobbyObserver,
+    Player,
+    Profile,
+    PunchlineCard,
+    SetupCard,
+    Gathering,
+)
 
 
 @pytest.fixture

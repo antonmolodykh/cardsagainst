@@ -158,6 +158,35 @@ class LobbySettings(BaseModel):
     turn_duration: int | None = 20
 
 
+class Turns:
+    pass
+
+
+class Gathering:
+    lobby: Lobby
+
+    def start_game(self, player: Player, lobby_settings: LobbySettings) -> None:
+        if player is not self.lobby.owner:
+            raise PlayerNotOwnerError
+
+        self.lobby.settings = lobby_settings
+        for pl in self.lobby.all_players:
+            for _ in range(self.lobby.HAND_SIZE):
+                pl.add_punchline_card(self.lobby.punchlines.get_card())
+            pl.observer.game_started(pl)
+
+        self.start_turn()
+
+    def start_turn(self):
+        self.lobby.state = Turns()
+        for pl in self.lobby.all_players:
+            pl.observer.turn_started(
+                setup=self.lobby.setup_card,
+                turn_duration=self.lobby.settings.turn_duration,
+                lead=self.lobby.lead,
+            )
+
+
 class Judgement:
     def __init__(self, lobby: Lobby):
         self.lobby = lobby
@@ -231,6 +260,7 @@ class Lobby:
         owner: Player,
         setups: Deck[SetupCard],
         punchlines: Deck[PunchlineCard],
+        state: Gathering,
     ) -> None:
         self.players = list(players)
         self.lead = lead
@@ -241,7 +271,8 @@ class Lobby:
         self.punchlines = punchlines
         self.setups = setups
         self.settings = LobbySettings()
-        self.state = None
+        self.state = state
+        self.state.lobby = self
 
     @property
     def all_players(self):
@@ -314,23 +345,3 @@ class Lobby:
     #     for pl in self._all_players_except(player):
     #         pl.observer.player_left(player)
     #     self.players.remove(player)
-
-    def start_game(self, player: Player, lobby_settings: LobbySettings) -> None:
-        if player is not self.owner:
-            raise PlayerNotOwnerError
-
-        self.settings = lobby_settings
-        for pl in self.all_players:
-            for _ in range(self.HAND_SIZE):
-                pl.add_punchline_card(self.punchlines.get_card())
-            pl.observer.game_started(pl)
-
-        self.start_first_turn()
-
-    def start_first_turn(self):
-        for pl in self.all_players:
-            pl.observer.turn_started(
-                setup=self.setup_card,
-                turn_duration=self.settings.turn_duration,
-                lead=self.lead,
-            )
