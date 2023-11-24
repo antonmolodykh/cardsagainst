@@ -291,10 +291,11 @@ class CardTextCase(StrEnum):
 
 
 class GameState(StrEnum):
-    BEGIN = "begin"
-    MOVE = "move"
-    JUDGING = "judging"
-    END = "end"
+    GATHERING = "gathering"
+    TURNS = "turns"
+    JUDGEMENT = "judgement"
+    CONGRATS = "congrats"
+    FINISHED = "finished"
 
 
 class TableCard(ApiModel):
@@ -426,7 +427,7 @@ async def websocket_endpoint(
             id=1,
             type="welcome",
             data=LobbyState(
-                state=GameState.BEGIN,
+                state=GameState.GATHERING,
                 players=[
                     get_player_data_from_player(player)
                     for player in (*lobby.players, lobby.lead)

@@ -204,7 +204,7 @@ class Judgement:
         self.lobby.table = []
 
         async def start_turn():
-            await asyncio.sleep(3)
+            await asyncio.sleep(5)
             self.start_next_turn()
 
         asyncio.create_task(start_turn())
