@@ -1,0 +1,2 @@
+[test.db]
+url = "postgresql+asyncpg://postgres:postgres@localhost:5432/420cards"
