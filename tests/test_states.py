@@ -1,6 +1,16 @@
 import asyncio
 
-from lobby import Deck, Judgement, Lobby, Player, PunchlineCard, SetupCard, Turns
+from lobby import (
+    CardOnTable,
+    Deck,
+    Judgement,
+    Lobby,
+    LobbySettings,
+    Player,
+    PunchlineCard,
+    SetupCard,
+    Turns,
+)
 
 
 def test_transit_gathering_to_turns(lobby: Lobby) -> None:
@@ -41,6 +51,7 @@ def test_transit_judgement_to_turns(
 
 async def test_transit_judgement_to_finished(
     lobby: Lobby,
+    egor: Player,
     anton: Player,
     punchline_deck: Deck[PunchlineCard],
     setup_deck: Deck[SetupCard],
@@ -51,8 +62,7 @@ async def test_transit_judgement_to_finished(
     lobby.settings.finish_delay = 0
     lobby.transit_to(Judgement(setup_card))
     punchline_card = punchline_deck.get_card()
-    anton.hand.append(punchline_card)
-    lobby.state.choose_punchline_card(anton, punchline_card)
+    lobby.table.append(CardOnTable(punchline_card, anton))
     lobby.state.pick_turn_winner(punchline_card)
     await asyncio.sleep(0.01)
     assert isinstance(lobby.state, Finished)
