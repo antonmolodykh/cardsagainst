@@ -13,5 +13,3 @@ class CardsDAO:
 
 
 cards_dao = CardsDAO()
-
-

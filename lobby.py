@@ -73,7 +73,6 @@ class LobbyObserver:
         pass
 
 
-
 @dataclass
 class SetupCard:
     id: int
@@ -132,6 +131,7 @@ class CardOnTable:
 
 AnyCard = TypeVar("AnyCard", bound=SetupCard | PunchlineCard)
 
+
 class Deck(Generic[AnyCard]):
     def __init__(self, cards: list[AnyCard]) -> None:
         self.cards = cards
@@ -154,6 +154,7 @@ class Deck(Generic[AnyCard]):
 
     def dump(self, cards: list[AnyCard]) -> None:
         self._dump.extend(cards)
+
 
 class LobbySettings(BaseModel):
     turn_duration: int | None = 20

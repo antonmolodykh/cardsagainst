@@ -18,17 +18,13 @@ async def session() -> AsyncGenerator[AsyncSession, None]:
 
 @pytest.fixture
 async def punchline_card(session: AsyncSession) -> None:
-    await session.execute(
-        insert(Punchline).values(text=[("value", ["variant"])]).returning(Punchline.id)
-    )
+    await session.execute(insert(Punchline).values(text=[("value", ["variant"])]))
 
 
 @pytest.fixture
 async def setup_card(session: AsyncSession) -> None:
     await session.execute(
-        insert(Setup)
-        .values(variant="variant", starts_with_punchline=True, text="text")
-        .returning(Punchline.id)
+        insert(Setup).values(variant="variant", starts_with_punchline=True, text="text")
     )
 
 
@@ -39,6 +35,6 @@ async def test_insert_punchline_card(session: AsyncSession) -> None:
 
 
 @pytest.mark.usefixtures("setup_card")
-async def test_insert_punchline_card(session: AsyncSession) -> None:
+async def test_insert_setup_card(session: AsyncSession) -> None:
     ((setup_card,),) = await session.execute(select(Setup))
     assert isinstance(setup_card, Setup)
