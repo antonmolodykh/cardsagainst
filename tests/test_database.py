@@ -2,7 +2,7 @@ import os
 from typing import AsyncGenerator
 
 import pytest
-from sqlalchemy import insert, select
+from sqlalchemy import insert, select, text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from dao import CardsDAO
@@ -13,8 +13,12 @@ from models import Punchline, Setup, metadata
 @pytest.fixture
 async def async_session():
     engine = create_async_engine(os.environ["PG_DATABASE"])
+    tables = ("punchlines", "setups")
     async with engine.begin() as conn:
         await conn.run_sync(metadata.create_all)
+        # TODO: Make smarter
+        for table in tables:
+            await conn.execute(text(f"TRUNCATE TABLE {table} RESTART IDENTITY CASCADE"))
 
     return async_sessionmaker(engine)
 
@@ -30,13 +34,14 @@ async def session(async_session) -> AsyncGenerator[AsyncSession, None]:
 
 
 @pytest.fixture(autouse=True)
-async def cards_dao(session) -> CardsDAO:
-    return CardsDAO()
+async def cards_dao(async_session) -> CardsDAO:
+    return CardsDAO(async_session)
 
 
 @pytest.fixture
 async def punchline_card(session: AsyncSession) -> None:
     await session.execute(insert(Punchline).values(text=[("value", ["variant"])]))
+    await session.commit()
 
 
 @pytest.fixture
@@ -44,6 +49,7 @@ async def setup_card(session: AsyncSession) -> None:
     await session.execute(
         insert(Setup).values(variant="variant", starts_with_punchline=True, text="text")
     )
+    await session.commit()
 
 
 @pytest.mark.usefixtures("punchline_card")

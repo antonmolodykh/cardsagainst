@@ -23,7 +23,7 @@ class CardsDAO:
                         case=setup_card.variant,
                         starts_with_punchline=setup_card.starts_with_punchline,
                     )
-                    for (setup_card, ) in result.all()
+                    for (setup_card,) in result.all()
                 ]
             )
 
@@ -37,7 +37,7 @@ class CardsDAO:
                         id=punchline_card.id,
                         text=punchline_card.text,
                     )
-                    for (punchline_card, ) in result.all()
+                    for (punchline_card,) in result.all()
                 ]
             )
 
