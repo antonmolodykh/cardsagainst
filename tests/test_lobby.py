@@ -252,7 +252,7 @@ def test_not_owner_start_game(lobby: Lobby, yura: Player, observer: Mock) -> Non
 
 
 @pytest.mark.usefixtures("egor_connected", "yura_connected")
-def test_finish_game(
+async def test_finish_game(
     lobby: Lobby,
     egor: Player,
     yura: Player,
