@@ -47,6 +47,8 @@ async def test_transit_judgement_to_finished(
 ) -> None:
     setup_card = setup_deck.get_card()
     lobby.add_player(anton)
+    lobby.settings.winner_score = 1
+    lobby.settings.finish_delay = 0
     lobby.transit_to(Judgement(setup_card))
     lobby.state.start_turn()
     punchline_card = anton.hand[0]

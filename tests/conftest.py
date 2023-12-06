@@ -85,7 +85,7 @@ def lobby(
     observer: Mock,
     state_gathering: Gathering,
 ) -> Lobby:
-    lobby = Lobby(
+    return Lobby(
         players=[],
         lead=egor,
         owner=egor,
@@ -95,8 +95,6 @@ def lobby(
         setups=setup_deck,
         punchlines=punchline_deck,
     )
-    lobby.settings = LobbySettings(finish_delay=0)
-    return lobby
 
 
 @pytest.fixture
