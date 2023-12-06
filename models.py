@@ -11,7 +11,6 @@ metadata = Base.metadata
 
 
 class Punchline(Base):
-
     __tablename__ = "punchlines"
 
     id: Mapped[int] = mapped_column(primary_key=True)

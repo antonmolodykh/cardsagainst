@@ -128,7 +128,7 @@ class CardOnTable:
         self.player = player
 
 
-AnyCard = TypeVar("AnyCard", bound=Card)
+AnyCard = TypeVar("AnyCard", bound=Card | CardOnTable)
 
 
 class Deck(Generic[AnyCard]):
