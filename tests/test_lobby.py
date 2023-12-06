@@ -249,3 +249,20 @@ def test_not_owner_start_game(lobby: Lobby, yura: Player, observer: Mock) -> Non
 
     observer.egor.turn_started.assert_not_called()
     observer.yura.turn_started.assert_not_called()
+
+
+@pytest.mark.usefixtures("egor_connected", "yura_connected")
+def test_finish_game(
+    lobby: Lobby,
+    egor: Player,
+    yura: Player,
+    observer: Mock,
+    punchline_deck: Deck[PunchlineCard],
+) -> None:
+    lobby.state.start_game(egor, LobbySettings(winner_score=1))
+    punchline_card = punchline_deck.get_card()
+    yura.hand.append(punchline_card)
+    lobby.state.choose_punchline_card(yura, punchline_card)
+    lobby.state.pick_turn_winner(punchline_card)
+
+    # TODO: Events about finished game
