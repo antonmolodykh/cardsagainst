@@ -54,6 +54,7 @@ class LobbyObserver:
         setup: SetupCard,
         turn_duration: int | None,
         lead: Player,
+        turn_count: int,
         card: PunchlineCard | None = None,
     ):
         pass
@@ -197,17 +198,18 @@ class Gathering(State):
 
     def start_turn(self):
         new_setup = self.lobby.setups.get_card()
+        self.lobby.turn_count += 1
         self.lobby.transit_to(Turns(new_setup))
         for pl in self.lobby.all_players:
             pl.observer.turn_started(
                 setup=new_setup,
                 turn_duration=self.lobby.settings.turn_duration,
                 lead=self.lobby.lead,
+                turn_count=self.lobby.turn_count,
             )
 
 
 class Turns(State):
-
     def __init__(self, setup: SetupCard):
         self.setup = setup
 
@@ -228,8 +230,11 @@ class Turns(State):
 
 
 class Judgement(State):
+    winner: Player | None
+
     def __init__(self, setup: SetupCard):
         self.setup = setup
+        self.winner = None
 
     def open_punchline_card(self, player: Player, card_on_table: CardOnTable) -> None:
         if self.lobby.lead is not player:
@@ -242,6 +247,8 @@ class Judgement(State):
     def pick_turn_winner(self, card) -> None:
         card_on_table = self.lobby.get_card_from_table(card=card)
         card_on_table.player.score += 1
+
+        self.winner = card_on_table.player
 
         for pl in self.lobby.all_players:
             pl.observer.turn_ended(card_on_table.player, card)
@@ -263,6 +270,7 @@ class Judgement(State):
         self.lobby.setups.dump([self.setup])
 
         new_setup = self.lobby.setups.get_card()
+        self.lobby.turn_count += 1
         self.lobby.transit_to(Turns(new_setup))
         for pl in self.lobby.all_players_except(previous_lead):
             new_card = self.lobby.punchlines.get_card()
@@ -272,11 +280,13 @@ class Judgement(State):
                 turn_duration=self.lobby.settings.turn_duration,
                 lead=self.lobby.lead,
                 card=new_card,
+                turn_count=self.lobby.turn_count,
             )
         previous_lead.observer.turn_started(
             setup=new_setup,
             turn_duration=self.lobby.settings.turn_duration,
             lead=self.lobby.lead,
+            turn_count=self.lobby.turn_count,
         )
 
 
@@ -290,6 +300,7 @@ class Lobby:
     setups: Deck[SetupCard]
     observer: LobbyObserver
     settings: LobbySettings
+    turn_count: int
 
     HAND_SIZE = 5
 
@@ -312,6 +323,7 @@ class Lobby:
         self.settings = LobbySettings()
         self.state = state
         self.state.lobby = self
+        self.turn_count = 0
 
     @property
     def all_players(self):
@@ -319,6 +331,12 @@ class Lobby:
 
     def all_players_except(self, player: Player):
         return [p for p in self.all_players if p is not player]
+
+    def get_selected_card(self, player: Player) -> PunchlineCard | None:
+        for card_on_tabel in self.table:
+            if card_on_tabel.player is player:
+                return card_on_tabel.card
+        return None
 
     def change_owner(self) -> None:
         self.owner = None

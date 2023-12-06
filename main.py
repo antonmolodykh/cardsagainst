@@ -25,6 +25,9 @@ from lobby import (
     LobbyObserver,
     LobbySettings,
     CardOnTable,
+    Judgement,
+    Turns,
+    Gathering,
 )
 
 lobby: Lobby = None
@@ -78,6 +81,15 @@ class SetupData(ApiModel):
     case: str
     starts_with_punchline: bool
 
+    @classmethod
+    def from_setup(cls, setup):
+        return cls(
+            uuid=setup.uuid.hex,
+            text=setup.text,
+            case=setup.case,
+            starts_with_punchline=setup.starts_with_punchline,
+        )
+
 
 class PunchlineData(ApiModel):
     uuid: str
@@ -86,6 +98,12 @@ class PunchlineData(ApiModel):
     @classmethod
     def from_card(cls, card: PunchlineCard):
         return cls(uuid=card.uuid.hex, text=card.text)
+
+
+class CardOnTableData(ApiModel):
+    card: PunchlineData | None
+    is_picked: bool
+    author: str | None
 
 
 class TableCardOpenedData(ApiModel):
@@ -202,6 +220,7 @@ class RemotePlayer(LobbyObserver):
         setup: SetupCard,
         turn_duration: int | None,
         lead: Player,
+        turn_count: int,
         card: PunchlineCard | None = None,
     ):
         self._queue.put_nowait(
@@ -209,14 +228,10 @@ class RemotePlayer(LobbyObserver):
                 id=1,
                 type="turnStarted",
                 data=TurnStartedData(
-                    setup=SetupData(
-                        uuid=setup.uuid.hex,
-                        text=setup.text,
-                        case=setup.case,
-                        starts_with_punchline=setup.starts_with_punchline,
-                    ),
+                    setup=SetupData.from_setup(setup),
                     timeout=turn_duration,
                     lead_uuid=lead.uuid,
+                    turn_count=turn_count,
                     is_leading=self.player is lead,
                     card=PunchlineData.from_card(card) if card else None,
                 ),
@@ -345,13 +360,21 @@ class TurnStartedData(ApiModel):
     timeout: int | None
     lead_uuid: str
     is_leading: bool
+    turn_count: int
     card: PunchlineData | None = None
 
 
 class LobbyState(ApiModel):
     state: GameState
     players: list[PlayerData]
-    table_cards: list[TableCard] | None = None
+    table: list[CardOnTableData]
+    hand: list[PunchlineData]
+    setup: SetupData | None
+    timeout: int | None
+    lead_uuid: str | None
+    is_leading: bool
+    turn_count: int | None
+    selected_card: PunchlineData | None = None
 
 
 class ConnectResponse(ApiModel):
@@ -395,9 +418,10 @@ async def connect(
             owner=player,
             setups=setups,
             punchlines=punchlines,
+            state=Gathering(),
         )
     return ConnectResponse(
-        host="ws://192.168.0.12:9999/connect",
+        host="ws://192.168.0.16:9999/connect",
         player_token=player_token,
         lobby_token="boba",
     )
@@ -422,17 +446,42 @@ async def websocket_endpoint(
     player.observer = observer
 
     lobby.set_connected(player)
+    selected_card = lobby.get_selected_card(player)
     await websocket.send_json(
         Event(
             id=1,
             type="welcome",
             data=LobbyState(
-                state=GameState.GATHERING,
+                state=GameState(type(lobby.state).__name__.lower()),
+                turn_count=lobby.turn_count,
                 players=[
                     get_player_data_from_player(player)
                     for player in (*lobby.players, lobby.lead)
                 ],
-                table_cards=None,
+                table=[
+                    CardOnTableData(
+                        card=card_on_table.card if card_on_table.is_open else None,
+                        is_picked=is_card_picked(card_on_table),
+                        author=(
+                            card_on_table.player.profile.name
+                            if is_card_picked(card_on_table)
+                            else None
+                        ),
+                    )
+                    for card_on_table in lobby.table
+                ],
+                hand=[PunchlineData.from_card(item) for item in player.hand],
+                setup=(
+                    SetupData.from_setup(lobby.state.setup)
+                    if isinstance(lobby.state, Judgement | Turns)
+                    else None
+                ),
+                timeout=lobby.settings.turn_duration,
+                lead_uuid=lobby.lead.uuid,
+                is_leading=player is lobby.lead,
+                selected_card=(
+                    PunchlineData.from_card(selected_card) if selected_card else None
+                ),
             ),
         ).model_dump(by_alias=True)
     )
@@ -448,6 +497,14 @@ async def websocket_endpoint(
             break
         except Exception:
             print(f"Unexpected error: {traceback.format_exc()}")
+
+
+def is_card_picked(card_on_table):
+    return (
+        card_on_table.player is lobby.state.winner
+        if isinstance(lobby.state, Judgement)
+        else False
+    )
 
 
 async def handle_event(json_data, player) -> None:
