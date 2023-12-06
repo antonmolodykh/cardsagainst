@@ -37,7 +37,7 @@ def test_transit_judgement_to_turns(
     assert lobby.state.setup is next_setup_card
 
 
-def test_transit_judgement_to_finished(
+async def test_transit_judgement_to_finished(
     lobby: Lobby,
     anton: Player,
     punchline_deck: Deck[PunchlineCard],
