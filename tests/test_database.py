@@ -1,9 +1,11 @@
+from typing import AsyncGenerator, Generator
+
 import pytest
 from sqlalchemy import insert, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from dao import cards_dao
-from db import engine
+from db import async_session, engine
 from lobby import PunchlineCard, SetupCard
 from models import Punchline, Setup, metadata
 from config import config
@@ -21,6 +23,12 @@ async def cleanup_database(set_test_environment: None) -> None:
         await conn.run_sync(metadata.create_all)
         for table in tables:
             await conn.execute(text(f"TRUNCATE TABLE {table} RESTART IDENTITY CASCADE"))
+
+
+@pytest.fixture
+async def session() -> AsyncGenerator[AsyncSession, None]:
+    async with async_session() as session:
+        yield session
 
 
 @pytest.fixture
