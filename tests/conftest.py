@@ -23,8 +23,8 @@ def setup_deck_size() -> int:
 def setup_deck(setup_deck_size: int) -> Deck[SetupCard]:
     return Deck(
         cards=[
-            SetupCard(text="", case="", starts_with_punchline=False)
-            for _ in range(setup_deck_size)
+            SetupCard(id=i + 1, text="", case="", starts_with_punchline=False)
+            for i in range(setup_deck_size)
         ]
     )
 
@@ -38,7 +38,10 @@ def punchline_deck_size() -> int:
 @pytest.fixture
 def punchline_deck(punchline_deck_size: int) -> Deck[PunchlineCard]:
     return Deck(
-        cards=[PunchlineCard(text={"a": "b"}) for _ in range(punchline_deck_size)]
+        cards=[
+            PunchlineCard(id=i + 1, text=[("a", ["b"])])
+            for i in range(punchline_deck_size)
+        ]
     )
 
 
