@@ -9,12 +9,14 @@ from uuid import uuid4
 from fastapi import FastAPI, WebSocket, Query, HTTPException
 from pydantic import BaseModel, ConfigDict
 from pydantic.alias_generators import to_camel
+from sqlalchemy import text
 from starlette.websockets import WebSocketDisconnect
 from typing_extensions import Annotated
 
 from fastapi.middleware.cors import CORSMiddleware
 
 from dao import cards_dao
+from db import engine
 from lobby import (
     Lobby,
     Player,
@@ -29,6 +31,7 @@ from lobby import (
     Turns,
     Gathering,
 )
+from models import metadata
 
 lobby: Lobby = None
 observers: list[LobbyObserver] = []
@@ -421,7 +424,7 @@ async def connect(
             state=Gathering(),
         )
     return ConnectResponse(
-        host="ws://192.168.0.16:9999/connect",
+        host="ws://192.168.0.18:9999/connect",
         player_token=player_token,
         lobby_token="boba",
     )
@@ -538,3 +541,11 @@ async def handle_event(json_data, player) -> None:
 @app.get("/")
 def health() -> str:
     return "200"
+
+
+@app.on_event("startup")
+async def startup() -> None:
+    """Init DB tables and sequences"""
+    async with engine.begin() as conn:
+        # Create tables if not exist
+        await conn.run_sync(metadata.create_all)

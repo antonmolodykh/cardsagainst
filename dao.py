@@ -1,5 +1,6 @@
 from uuid import uuid4
 
+from models import Punchline
 from lobby import Deck, PunchlineCard, SetupCard
 
 
