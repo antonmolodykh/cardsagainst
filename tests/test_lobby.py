@@ -15,6 +15,7 @@ from lobby import (
     Profile,
     PunchlineCard,
     SetupCard,
+    Turns,
 )
 
 
@@ -212,19 +213,21 @@ def test_lead_start_game(
 ) -> None:
     lobby_settings = LobbySettings(turn_duration=30)
     lobby.start_game(egor, lobby_settings)
-
+    assert isinstance(lobby.state, Turns)
     expected_events = [
         call.egor.game_started(egor),
         call.egor.turn_started(
-            setup=lobby.setup_card,
+            setup=lobby.state.setup,
             turn_duration=lobby_settings.turn_duration,
             lead=egor,
+            turn_count=1,
         ),
         call.yura.game_started(yura),
         call.yura.turn_started(
-            setup=lobby.setup_card,
+            setup=lobby.state.setup,
             turn_duration=lobby_settings.turn_duration,
             lead=egor,
+            turn_count=1,
         ),
     ]
     observer.assert_has_calls(expected_events, any_order=True)
@@ -241,3 +244,4 @@ def test_not_owner_start_game(lobby: Lobby, yura: Player, observer: Mock) -> Non
 
 
 # TODO: Test it
+# TODO:
