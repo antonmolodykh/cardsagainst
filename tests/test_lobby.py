@@ -269,7 +269,7 @@ async def test_finish_game(
     # TODO: Events about finished game
 
     expected_events = [
-        call.egor.game_finished(winner=yura),
-        call.yura.game_finished(winner=yura),
+        call.egor.game_finished(yura),
+        call.yura.game_finished(yura),
     ]
     observer.assert_has_calls(expected_events)
