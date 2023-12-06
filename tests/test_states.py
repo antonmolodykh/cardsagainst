@@ -10,6 +10,7 @@ from lobby import (
     PunchlineCard,
     SetupCard,
     Turns,
+    Finished,
 )
 
 

@@ -72,6 +72,9 @@ class LobbyObserver:
     def all_players_ready(self):
         pass
 
+    def game_finished(self, winner: Player):
+        pass
+
 
 @dataclass
 class SetupCard:
@@ -158,6 +161,8 @@ class Deck(Generic[AnyCard]):
 
 class LobbySettings(BaseModel):
     turn_duration: int | None = 20
+    winner_score: int | None = 10
+    finish_delay: int | None = 5
 
 
 class State:
@@ -246,6 +251,7 @@ class Judgement(State):
             pl.observer.table_card_opened(card_on_table)
 
     def pick_turn_winner(self, card) -> None:
+        # TODO: проверять что только лид это может
         card_on_table = self.lobby.get_card_from_table(card=card)
         card_on_table.player.score += 1
 
@@ -258,6 +264,15 @@ class Judgement(State):
             [card_in_table.card for card_in_table in self.lobby.table]
         )
         self.lobby.table = []
+
+        async def finish_game(winner: Player):
+            await asyncio.sleep(self.lobby.settings.finish_delay)
+            self.finish_game(winner)
+
+        for pl in self.lobby.players:
+            if pl.score == self.lobby.settings.winner_score:
+                asyncio.create_task(finish_game(pl))
+                return
 
         async def start_turn():
             await asyncio.sleep(5)
@@ -289,6 +304,17 @@ class Judgement(State):
             lead=self.lobby.lead,
             turn_count=self.lobby.turn_count,
         )
+
+    def finish_game(self, winner: Player):
+        for pl in self.lobby.all_players:
+            pl.observer.game_finished(winner)
+
+        self.lobby.transit_to(Finished(winner))
+
+
+class Finished(State):
+    def __init__(self, winner: Player):
+        self.winner = winner
 
 
 class Lobby:

@@ -120,59 +120,12 @@ class TurnEndedData(ApiModel):
     score: int
 
 
+class GameFinishedData(ApiModel):
+    winner_uuid: str
+
+
 class GameStartedData(ApiModel):
     hand: list[PunchlineData]
-
-
-class BroadcastObserver(LobbyObserver):
-    PLAYER_REMOVAL_DELAY: int = 15
-
-    def __init__(self):
-        self.websockets = []
-        self.queue = asyncio.Queue()
-
-    def add_websocket(self, websocket: WebSocket):
-        self.websockets.append(websocket)
-
-    def remove_websocket(self, websocket: WebSocket):
-        self.websockets.remove(websocket)
-
-    # async def schedule_player_removal(self, player):
-    #     await asyncio.sleep(self.PLAYER_REMOVAL_DELAY)
-    #     if player.is_connected is False:
-    #         lobby.remove_player(player)
-
-    def player_joined(self, player: Player):
-        self.queue.put_nowait(
-            Event(id=1, type="playerJoined", data=get_player_data_from_player(player))
-        )
-
-    def player_left(self, player: Player):
-        self.queue.put_nowait(
-            Event(id=1, type="playerLeft", data=PlayerIdData(uuid=player.uuid))
-        )
-
-    def player_connected(self, player: Player):
-        self.queue.put_nowait(
-            Event(id=2, type="playerConnected", data=PlayerIdData(uuid=player.uuid))
-        )
-
-    def player_disconnected(self, player: Player):
-        self.queue.put_nowait(
-            Event(id=1, type="playerDisconnected", data=PlayerIdData(uuid=player.uuid))
-        )
-        # asyncio.create_task(self.schedule_player_removal(player))
-
-    async def send_messages(self):
-        while True:
-            event = await self.queue.get()
-            print(f"Event: {event}")
-            await asyncio.gather(
-                *(
-                    websocket.send_json(event.model_dump(by_alias=True))
-                    for websocket in self.websockets
-                )
-            )
 
 
 class RemotePlayer(LobbyObserver):
@@ -272,16 +225,21 @@ class RemotePlayer(LobbyObserver):
     def all_players_ready(self):
         self._queue.put_nowait(Event(id=1, type="allPlayersReady", data=None))
 
+    def game_finished(self, winner: Player):
+        self._queue.put_nowait(
+            Event(
+                id=1,
+                type="gameFinished",
+                data=GameFinishedData(winner_uuid=winner.uuid),
+            )
+        )
+
     async def send_messages(self):
         while True:
             event = await self._queue.get()
             data = event.model_dump(by_alias=True)
             print(f"Event: {data}")
             await self.websocket.send_json(data)
-
-
-broadcast_observer = BroadcastObserver()
-asyncio.create_task(broadcast_observer.send_messages())
 
 
 class ConnectRequest(BaseModel):
@@ -521,7 +479,7 @@ async def handle_event(json_data, player) -> None:
         case "makeTurn":
             event = Event[MakeTurnData].model_validate(json_data)
             try:
-                card = lobby.punchlines.get_card_by_uuid(event.data.uuid)
+                card = lobby.punchlines.get_card_by_uuid(int(event.data.uuid))
             except KeyError:
                 print("unknown card")
                 return
@@ -532,7 +490,7 @@ async def handle_event(json_data, player) -> None:
         case "pickTurnWinner":
             event = Event[PickTurnWinnerData].model_validate(json_data)
             try:
-                card = lobby.punchlines.get_card_by_uuid(event.data.uuid)
+                card = lobby.punchlines.get_card_by_uuid(int(event.data.uuid))
             except KeyError:
                 return
             lobby.state.pick_turn_winner(card)
