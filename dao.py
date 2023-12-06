@@ -8,8 +8,11 @@ from lobby import Deck, PunchlineCard, SetupCard
 
 
 class CardsDAO:
+    def __init__(self, async_session=async_session) -> None:
+        self.async_session = async_session
+
     async def get_setups(self, deck_id: str) -> Deck[SetupCard]:
-        async with async_session() as session:
+        async with self.async_session() as session:
             result = await session.execute(select(Setup))
 
             return Deck(
@@ -25,7 +28,7 @@ class CardsDAO:
             )
 
     async def get_punchlines(self, deck_id: str) -> Deck[PunchlineCard]:
-        async with async_session() as session:
+        async with self.async_session() as session:
             result = await session.execute(select(Punchline))
 
             return Deck(
