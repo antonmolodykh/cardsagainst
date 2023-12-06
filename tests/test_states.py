@@ -50,7 +50,6 @@ async def test_transit_judgement_to_finished(
     lobby.settings.winner_score = 1
     lobby.settings.finish_delay = 0
     lobby.transit_to(Judgement(setup_card))
-    lobby.state.start_turn()
     punchline_card = anton.hand[0]
     lobby.state.choose_punchline_card(anton, punchline_card)
     lobby.state.pick_turn_winner(punchline_card)
