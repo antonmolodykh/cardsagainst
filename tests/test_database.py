@@ -6,10 +6,12 @@ from dao import cards_dao
 from db import engine
 from lobby import PunchlineCard, SetupCard
 from models import Punchline, Setup, metadata
+from config import config
 
 
 @pytest.fixture(autouse=True)
 async def cleanup_database() -> None:
+    config.configure(FORCE_ENV_FOR_DYNACONF="test")
     tables = ("punchlines", "setups")
     async with engine.begin() as conn:
         await conn.run_sync(metadata.create_all)
