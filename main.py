@@ -85,9 +85,9 @@ class SetupData(ApiModel):
     starts_with_punchline: bool
 
     @classmethod
-    def from_setup(cls, setup):
+    def from_setup(cls, setup: SetupCard):
         return cls(
-            uuid=setup.uuid.hex,
+            uuid=str(setup.id),
             text=setup.text,
             case=setup.case,
             starts_with_punchline=setup.starts_with_punchline,
@@ -96,11 +96,11 @@ class SetupData(ApiModel):
 
 class PunchlineData(ApiModel):
     uuid: str
-    text: dict[str, str]
+    text: list[tuple[str, list[str]]]
 
     @classmethod
     def from_card(cls, card: PunchlineCard):
-        return cls(uuid=card.uuid.hex, text=card.text)
+        return cls(uuid=str(card.id), text=card.text)
 
 
 class CardOnTableData(ApiModel):
@@ -264,7 +264,7 @@ class RemotePlayer(LobbyObserver):
                 id=1,
                 type="turnEnded",
                 data=TurnEndedData(
-                    winner_uuid=winner.uuid, card_uuid=card.uuid.hex, score=winner.score
+                    winner_uuid=winner.uuid, card_uuid=str(card.id), score=winner.score
                 ),
             )
         )
@@ -412,8 +412,8 @@ async def connect(
     if lobby_token:
         lobby.add_player(player)
     else:
-        setups = cards_dao.get_setups(deck_id="one")
-        punchlines = cards_dao.get_punchlines(deck_id="one")
+        setups = await cards_dao.get_setups(deck_id="one")
+        punchlines = await cards_dao.get_punchlines(deck_id="one")
 
         lobby = Lobby(
             players=[],

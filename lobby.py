@@ -84,7 +84,7 @@ class SetupCard:
 @dataclass
 class PunchlineCard:
     id: int
-    text: dict[str, str]
+    text: list[tuple[str, list[str]]]
 
 
 class Profile(BaseModel):
@@ -303,7 +303,7 @@ class Lobby:
     settings: LobbySettings
     turn_count: int
 
-    HAND_SIZE = 5
+    HAND_SIZE = 10
 
     def __init__(
         self,

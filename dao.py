@@ -15,12 +15,12 @@ class CardsDAO:
             return Deck(
                 cards=[
                     SetupCard(
-                        id=row.id,
-                        text=row.text,
-                        case=row.variant,
-                        starts_with_punchline=row.starts_with_punchline,
+                        id=setup_card.id,
+                        text=setup_card.text,
+                        case=setup_card.variant,
+                        starts_with_punchline=setup_card.starts_with_punchline,
                     )
-                    for row in result.all()
+                    for (setup_card, ) in result.all()
                 ]
             )
 
@@ -31,10 +31,10 @@ class CardsDAO:
             return Deck(
                 cards=[
                     PunchlineCard(
-                        id=row.id,
-                        text=row.text,
+                        id=punchline_card.id,
+                        text=punchline_card.text,
                     )
-                    for row in result.all()
+                    for (punchline_card, ) in result.all()
                 ]
             )
 
