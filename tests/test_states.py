@@ -44,13 +44,14 @@ async def test_transit_judgement_to_finished(
     anton: Player,
     punchline_deck: Deck[PunchlineCard],
     setup_deck: Deck[SetupCard],
+    punchline_card: PunchlineCard,
 ) -> None:
     setup_card = setup_deck.get_card()
     lobby.add_player(anton)
     lobby.settings.winner_score = 1
     lobby.settings.finish_delay = 0
     lobby.transit_to(Judgement(setup_card))
-    punchline_card = anton.hand[0]
+    anton.hand.append(punchline_card)
     lobby.state.choose_punchline_card(anton, punchline_card)
     lobby.state.pick_turn_winner(punchline_card)
     await asyncio.sleep(0.01)
