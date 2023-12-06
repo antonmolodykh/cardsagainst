@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import random
+from dataclasses import dataclass
 from typing import Collection, Generic, TypeVar
 from uuid import uuid4
 
@@ -72,17 +73,18 @@ class LobbyObserver:
         pass
 
 
-class Card(BaseModel):
-    uuid: Annotated[uuid4, Field(default_factory=uuid4)]
 
-
-class SetupCard(Card):
+@dataclass
+class SetupCard:
+    id: int
     text: str
     case: str
     starts_with_punchline: bool
 
 
-class PunchlineCard(Card):
+@dataclass
+class PunchlineCard:
+    id: int
     text: dict[str, str]
 
 
@@ -128,18 +130,17 @@ class CardOnTable:
         self.player = player
 
 
-AnyCard = TypeVar("AnyCard", bound=Card | CardOnTable)
-
+AnyCard = TypeVar("AnyCard", bound=SetupCard | PunchlineCard)
 
 class Deck(Generic[AnyCard]):
     def __init__(self, cards: list[AnyCard]) -> None:
         self.cards = cards
         self._dump = []
         self._shuffle()
-        self.mapping = {card.uuid.hex: card for card in cards}
+        self.mapping = {card.id: card for card in cards}
 
-    def get_card_by_uuid(self, card_uuid):
-        return self.mapping[card_uuid]
+    def get_card_by_uuid(self, card_id):
+        return self.mapping[card_id]
 
     def _shuffle(self):
         random.shuffle(self.cards)
@@ -153,7 +154,6 @@ class Deck(Generic[AnyCard]):
 
     def dump(self, cards: list[AnyCard]) -> None:
         self._dump.extend(cards)
-
 
 class LobbySettings(BaseModel):
     turn_duration: int | None = 20
