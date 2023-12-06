@@ -1,3 +1,5 @@
+import asyncio
+
 from lobby import Deck, Judgement, Lobby, Player, PunchlineCard, SetupCard, Turns
 
 
@@ -50,5 +52,5 @@ async def test_transit_judgement_to_finished(
     punchline_card = anton.hand[0]
     lobby.state.choose_punchline_card(anton, punchline_card)
     lobby.state.pick_turn_winner(punchline_card)
-
+    await asyncio.sleep(0.01)
     assert isinstance(lobby.state, Finished)
