@@ -1,4 +1,4 @@
-class CardsDaoInMemory(CardsDao):
+class CardsDaoInMemory:
     def get_cards(self) -> None:
         pass
 
