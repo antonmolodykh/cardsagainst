@@ -1,18 +1,23 @@
 from unittest.mock import Mock
 
 import pytest
+from config import config
 
 from lobby import (
     Deck,
+    Gathering,
     Lobby,
     LobbyObserver,
-    LobbySettings,
     Player,
     Profile,
     PunchlineCard,
     SetupCard,
-    Gathering,
 )
+
+
+@pytest.fixture(scope="session", autouse=True)
+async def set_test_environment() -> None:
+    config.configure(FORCE_ENV_FOR_DYNACONF="test")
 
 
 @pytest.fixture

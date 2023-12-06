@@ -8,16 +8,10 @@ from dao import cards_dao
 from db import async_session, engine
 from lobby import PunchlineCard, SetupCard
 from models import Punchline, Setup, metadata
-from config import config
-
-
-@pytest.fixture(scope="session", autouse=True)
-async def set_test_environment() -> None:
-    config.configure(FORCE_ENV_FOR_DYNACONF="test")
 
 
 @pytest.fixture(autouse=True)
-async def cleanup_database(set_test_environment: None) -> None:
+async def cleanup_database() -> None:
     tables = ("punchlines", "setups")
     async with engine.begin() as conn:
         await conn.run_sync(metadata.create_all)
