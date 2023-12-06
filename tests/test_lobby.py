@@ -1,3 +1,4 @@
+import asyncio
 from unittest.mock import Mock, call
 
 import pytest
@@ -264,5 +265,11 @@ async def test_finish_game(
     yura.hand.append(punchline_card)
     lobby.state.choose_punchline_card(yura, punchline_card)
     lobby.state.pick_turn_winner(punchline_card)
-
+    await asyncio.sleep(0.01)
     # TODO: Events about finished game
+
+    expected_events = [
+        call.egor.game_finished(winner_uuid=yura.uuid),
+        call.yura.game_finished(winner_uuid=yura.uuid),
+    ]
+    observer.assert_has_calls(expected_events)
