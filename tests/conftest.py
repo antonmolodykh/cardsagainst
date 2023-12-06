@@ -6,6 +6,7 @@ from lobby import (
     Deck,
     Lobby,
     LobbyObserver,
+    LobbySettings,
     Player,
     Profile,
     PunchlineCard,
@@ -94,6 +95,7 @@ def lobby(
         setups=setup_deck,
         punchlines=punchline_deck,
     )
+    lobby.settings = LobbySettings(finish_delay=0)
     return lobby
 
 
