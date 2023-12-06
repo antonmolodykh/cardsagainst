@@ -54,13 +54,8 @@ async def test_insert_punchline_card(session: AsyncSession) -> None:
 
 @pytest.mark.usefixtures("setup_card")
 async def test_insert_setup_card(session: AsyncSession) -> None:
-    result = await session.execute(select(Setup))
-    a = [row for row in result.all()]
-    assert isinstance(a[0][0].text, str)
-
     ((setup_card,),) = await session.execute(select(Setup))
-    assert isinstance(a[0][0], Setup)
-    assert isinstance(a[0][0], Setup)
+    assert isinstance(setup_card, Setup)
 
 
 @pytest.mark.usefixtures("setup_card")
