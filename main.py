@@ -2,41 +2,56 @@ from __future__ import annotations
 
 import asyncio
 import traceback
+from contextlib import asynccontextmanager
 from enum import StrEnum
-from typing import Generic, TypeVar
+from typing import AsyncGenerator, Generic, TypeVar
 from uuid import uuid4
 
-from fastapi import FastAPI, WebSocket, Query, HTTPException
+from fastapi import FastAPI, HTTPException, Query, WebSocket
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ConfigDict
 from pydantic.alias_generators import to_camel
-from sqlalchemy import text
+from sqlalchemy.ext.asyncio import async_sessionmaker
 from starlette.websockets import WebSocketDisconnect
 from typing_extensions import Annotated
 
-from fastapi.middleware.cors import CORSMiddleware
-
-from dao import cards_dao
-from db import engine
+from dao import CardsDAO, CardsDAODependency, cards_dao_dependency
+from db import create_engine, create_tables_if_not_exist
 from lobby import (
+    CardOnTable,
+    Gathering,
+    Judgement,
     Lobby,
-    Player,
-    Profile,
-    Deck,
-    SetupCard,
-    PunchlineCard,
     LobbyObserver,
     LobbySettings,
-    CardOnTable,
-    Judgement,
+    Player,
+    Profile,
+    PunchlineCard,
+    SetupCard,
     Turns,
-    Gathering,
 )
-from models import metadata
 
 lobby: Lobby = None
 observers: list[LobbyObserver] = []
 
-app = FastAPI()
+
+@asynccontextmanager
+async def lifespan(app_: FastAPI) -> AsyncGenerator[None, None]:
+    engine = create_engine()
+    await create_tables_if_not_exist(engine)
+
+    async_session = async_sessionmaker(engine)
+    cards_dao = CardsDAO(async_session)
+
+    app_.override_dependencies = {
+        cards_dao_dependency: lambda: cards_dao,
+    }
+
+    yield
+
+
+app = FastAPI(lifespan=lifespan)
+
 
 app.add_middleware(
     CORSMiddleware,
@@ -349,6 +364,7 @@ async def connect(
     *,
     lobby_token: Annotated[str | None, Query(alias="lobbyToken")] = None,
     connect_request: ConnectRequest,
+    cards_dao: CardsDAODependency,
 ) -> ConnectResponse:
     global lobby
 
@@ -499,11 +515,3 @@ async def handle_event(json_data, player) -> None:
 @app.get("/")
 def health() -> str:
     return "200"
-
-
-@app.on_event("startup")
-async def startup() -> None:
-    """Init DB tables and sequences"""
-    async with engine.begin() as conn:
-        # Create tables if not exist
-        await conn.run_sync(metadata.create_all)
