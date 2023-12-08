@@ -14,8 +14,7 @@ from models import Punchline, Setup, metadata
 async def async_session() -> async_sessionmaker:
     engine = create_engine()
     async with engine.begin() as conn:
-        for table in metadata.tables.values():
-            await conn.execute(table.delete())
+        await conn.run_sync(metadata.drop_all)
     await create_tables_if_not_exist(engine)
     return async_sessionmaker(engine)
 
