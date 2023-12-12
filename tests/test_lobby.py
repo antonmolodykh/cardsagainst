@@ -282,6 +282,7 @@ async def test_continue(
     observer: Mock,
     punchline_deck: Deck[PunchlineCard],
 ) -> None:
+    lobby.add_player(yura)
     lobby.state.start_game(egor, LobbySettings(winner_score=1, finish_delay=0))
     punchline_card = punchline_deck.get_card()
     yura.hand.append(punchline_card)
@@ -318,6 +319,7 @@ async def test_continue_not_owner(
     observer: Mock,
     punchline_deck: Deck[PunchlineCard],
 ) -> None:
+    lobby.add_player(yura)
     lobby.state.start_game(egor, LobbySettings(winner_score=1, finish_delay=0))
     punchline_card = punchline_deck.get_card()
     yura.hand.append(punchline_card)
