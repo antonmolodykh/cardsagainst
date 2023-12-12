@@ -306,7 +306,6 @@ async def test_continue(
             turn_duration=lobby.settings.turn_duration,
             lead=yura,
             turn_count=2,
-            card=ANY
         ),
     ]
     observer.assert_has_calls(expected_events)
