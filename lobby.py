@@ -356,6 +356,24 @@ class Finished(State):
 
         self.start_turn()
 
+    def start_game(
+        self,
+        player: Player,
+        settings: LobbySettings,
+        setups: Deck[SetupCard],
+        punchlines: Deck[PunchlineCard],
+    ) -> None:
+        self.lobby.setups = setups
+        self.lobby.punchlines = punchlines
+        self.lobby.table.clear()
+
+        for pl in self.lobby.all_players:
+            pl.hand.clear()
+            pl.score = 0
+
+        self.lobby.transit_to(Gathering())
+        self.lobby.state.start_game(player, settings)
+
 
 class Lobby:
     uid: uuid4

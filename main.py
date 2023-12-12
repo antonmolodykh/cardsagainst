@@ -373,6 +373,9 @@ async def connect(
         punchlines = await cards_dao.get_punchlines(deck_id="one")
 
         lobby = Lobby(
+            LobbySettings(
+                winning_score=config.winning_score,
+            ),
             players=[],
             lead=player,
             owner=player,
