@@ -317,11 +317,12 @@ class Judgement(State):
         for pl in self.lobby.all_players:
             pl.observer.game_finished(winner)
 
-        self.lobby.transit_to(Finished(winner))
+        self.lobby.transit_to(Finished(winner, self.setup))
 
 
 class Finished(State):
-    def __init__(self, winner: Player):
+    def __init__(self, winner: Player, setup: SetupCard):
+        self.setup = setup
         self.winner = winner
 
     def start_turn(self):
