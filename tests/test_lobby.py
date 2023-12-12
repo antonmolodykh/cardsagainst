@@ -328,3 +328,42 @@ async def test_continue_not_owner(
 
     with pytest.raises(PlayerNotOwnerError):
         lobby.state.continue_game(yura)
+
+
+@pytest.mark.usefixtures("egor_connected", "yura_connected")
+async def test_start_game_after_finish(
+    lobby: Lobby,
+    egor: Player,
+    yura: Player,
+    observer: Mock,
+    punchline_deck: Deck[PunchlineCard],
+) -> None:
+    lobby.state.start_game(egor, LobbySettings(winning_score=1, finish_delay=0))
+    punchline_card = punchline_deck.get_card()
+    yura.hand.append(punchline_card)
+    lobby.state.choose_punchline_card(yura, punchline_card)
+    lobby.state.pick_turn_winner(punchline_card)
+    await asyncio.sleep(0.01)
+    lobby.state.start_game(
+        egor, LobbySettings(turn_duration=10, winning_score=2, finish_delay=0)
+    )
+
+    assert isinstance(lobby.state, Turns)
+
+    expected_events = [
+        call.egor.game_started(egor),
+        call.egor.turn_started(
+            setup=lobby.state.setup,
+            turn_duration=10,
+            lead=egor,
+            turn_count=1,
+        ),
+        call.yura.game_started(yura),
+        call.yura.turn_started(
+            setup=lobby.state.setup,
+            turn_duration=10,
+            lead=egor,
+            turn_count=1,
+        ),
+    ]
+    observer.assert_has_calls(expected_events, any_order=True)
