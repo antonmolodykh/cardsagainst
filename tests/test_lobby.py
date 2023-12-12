@@ -297,14 +297,14 @@ async def test_continue(
         call.egor.turn_started(
             setup=lobby.state.setup,
             turn_duration=lobby.settings.turn_duration,
-            lead=egor,
+            lead=yura,
             turn_count=2,
             card=ANY
         ),
         call.yura.turn_started(
             setup=lobby.state.setup,
             turn_duration=lobby.settings.turn_duration,
-            lead=egor,
+            lead=yura,
             turn_count=2,
             card=ANY
         ),
