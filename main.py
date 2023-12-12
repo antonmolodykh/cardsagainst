@@ -13,6 +13,7 @@ from pydantic.alias_generators import to_camel
 from starlette.websockets import WebSocketDisconnect
 from typing_extensions import Annotated
 
+from config import config
 from dependencies import CardsDAODependency, lifespan
 from lobby import (
     CardOnTable,
@@ -297,7 +298,8 @@ class Event(ApiModel, Generic[AnyEventData]):
 
 
 class StartGameData(ApiModel):
-    timeout: int | None
+    turn_duration: int | None = None
+    winning_score: int | None = None
 
 
 class MakeTurnData(ApiModel):
@@ -471,7 +473,10 @@ async def handle_event(json_data, player) -> None:
             event = Event[StartGameData].model_validate(json_data)
             lobby.state.start_game(
                 player=player,
-                lobby_settings=LobbySettings(turn_duration=event.data.timeout),
+                lobby_settings=LobbySettings(
+                    turn_duration=event.data.turn_duration,
+                    winning_score=event.data.winning_score or config.winning_score,
+                ),
             )
         case "makeTurn":
             event = Event[MakeTurnData].model_validate(json_data)

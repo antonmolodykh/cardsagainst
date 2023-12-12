@@ -163,9 +163,9 @@ class Deck(Generic[AnyCard]):
 
 
 class LobbySettings(BaseModel):
-    turn_duration: int | None = 20
-    winner_score: int | None = 10
-    finish_delay: int | None = 5
+    turn_duration: int | None = None
+    winning_score: int
+    finish_delay: int = 5
 
 
 class State:
@@ -278,7 +278,7 @@ class Judgement(State):
             self.finish_game(winner)
 
         for pl in self.lobby.players:
-            if pl.score == self.lobby.settings.winner_score:
+            if pl.score == self.lobby.settings.winning_score:
                 asyncio.create_task(finish_game(pl))
                 return
 
@@ -373,6 +373,8 @@ class Lobby:
 
     def __init__(
         self,
+        settings: LobbySettings,
+        /,
         players: Collection[Player],
         lead: Player,
         owner: Player,
@@ -387,7 +389,7 @@ class Lobby:
         self.uid = uuid4()
         self.punchlines = punchlines
         self.setups = setups
-        self.settings = LobbySettings()
+        self.settings = settings
         self.state = state
         self.state.lobby = self
         self.turn_count = 0

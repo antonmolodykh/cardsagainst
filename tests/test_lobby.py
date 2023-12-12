@@ -260,7 +260,7 @@ async def test_finish_game(
     observer: Mock,
     punchline_deck: Deck[PunchlineCard],
 ) -> None:
-    lobby.state.start_game(egor, LobbySettings(winner_score=1, finish_delay=0))
+    lobby.state.start_game(egor, LobbySettings(winning_score=1, finish_delay=0))
     punchline_card = punchline_deck.get_card()
     yura.hand.append(punchline_card)
     lobby.state.choose_punchline_card(yura, punchline_card)
@@ -274,6 +274,7 @@ async def test_finish_game(
     ]
     observer.assert_has_calls(expected_events)
 
+
 @pytest.mark.usefixtures("egor_connected", "yura_connected")
 async def test_continue(
     lobby: Lobby,
@@ -282,7 +283,7 @@ async def test_continue(
     observer: Mock,
     punchline_deck: Deck[PunchlineCard],
 ) -> None:
-    lobby.state.start_game(egor, LobbySettings(winner_score=1, finish_delay=0))
+    lobby.state.start_game(egor, LobbySettings(winning_score=1, finish_delay=0))
     punchline_card = punchline_deck.get_card()
     yura.hand.append(punchline_card)
     lobby.state.choose_punchline_card(yura, punchline_card)
@@ -304,7 +305,7 @@ async def test_continue(
             turn_duration=lobby.settings.turn_duration,
             lead=yura,
             turn_count=2,
-            card=ANY
+            card=ANY,
         ),
     ]
     observer.assert_has_calls(expected_events, any_order=True)
@@ -318,7 +319,7 @@ async def test_continue_not_owner(
     observer: Mock,
     punchline_deck: Deck[PunchlineCard],
 ) -> None:
-    lobby.state.start_game(egor, LobbySettings(winner_score=1, finish_delay=0))
+    lobby.state.start_game(egor, LobbySettings(winning_score=1, finish_delay=0))
     punchline_card = punchline_deck.get_card()
     yura.hand.append(punchline_card)
     lobby.state.choose_punchline_card(yura, punchline_card)
