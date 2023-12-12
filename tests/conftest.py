@@ -8,7 +8,7 @@ from lobby import (
     Gathering,
     Lobby,
     LobbyObserver,
-    Player,
+    LobbySettings, Player,
     Profile,
     PunchlineCard,
     SetupCard,
@@ -91,6 +91,7 @@ def lobby(
     state_gathering: Gathering,
 ) -> Lobby:
     return Lobby(
+        sessings=LobbySettings(winner_score=1),
         players=[],
         lead=egor,
         owner=egor,
