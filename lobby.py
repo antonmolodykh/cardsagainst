@@ -121,6 +121,9 @@ class Player:
     def add_punchline_card(self, card: PunchlineCard):
         self.hand.append(card)
 
+    def __repr__(self) -> str:
+        return f"Player({self.profile.name})"
+
 
 class CardOnTable:
     card: PunchlineCard
