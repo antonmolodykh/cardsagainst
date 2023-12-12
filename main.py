@@ -491,6 +491,8 @@ async def handle_event(json_data, player) -> None:
             except KeyError:
                 return
             lobby.state.pick_turn_winner(card)
+        case "continueGame":
+            lobby.state.continue_game(player)
 
 
 @app.get("/")

@@ -188,6 +188,11 @@ class State:
             f"method `pick_turn_winner` not expected in state {type(self).__name__}"
         )
 
+    def continue_game(self, player: Player) -> None:
+        raise Exception(
+            f"method `continue_game` not expected in state {type(self).__name__}"
+        )
+
 
 class Gathering(State):
     def start_game(self, player: Player, lobby_settings: LobbySettings) -> None:
@@ -315,6 +320,37 @@ class Judgement(State):
 class Finished(State):
     def __init__(self, winner: Player):
         self.winner = winner
+
+    def start_turn(self):
+        previous_lead = self.lobby.lead
+        self.lobby.change_lead()
+        self.lobby.setups.dump([self.setup])
+
+        new_setup = self.lobby.setups.get_card()
+        self.lobby.turn_count += 1
+        self.lobby.transit_to(Turns(new_setup))
+        for pl in self.lobby.all_players_except(previous_lead):
+            new_card = self.lobby.punchlines.get_card()
+            pl.add_punchline_card(new_card)
+            pl.observer.turn_started(
+                setup=new_setup,
+                turn_duration=self.lobby.settings.turn_duration,
+                lead=self.lobby.lead,
+                card=new_card,
+                turn_count=self.lobby.turn_count,
+            )
+        previous_lead.observer.turn_started(
+            setup=new_setup,
+            turn_duration=self.lobby.settings.turn_duration,
+            lead=self.lobby.lead,
+            turn_count=self.lobby.turn_count,
+        )
+
+    def continue_game(self, player: Player) -> None:
+        if player is not self.lobby.owner:
+            raise PlayerNotOwnerError
+
+        self.start_turn()
 
 
 class Lobby:
