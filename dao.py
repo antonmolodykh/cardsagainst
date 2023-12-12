@@ -1,15 +1,16 @@
-from uuid import uuid4
-
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import async_sessionmaker
 
-from db import async_session
-from models import Punchline, Setup
 from lobby import Deck, PunchlineCard, SetupCard
+from models import Punchline, Setup
 
 
 class CardsDAO:
+    def __init__(self, async_session: async_sessionmaker):
+        self.async_session = async_session
+
     async def get_setups(self, deck_id: str) -> Deck[SetupCard]:
-        async with async_session() as session:
+        async with self.async_session() as session:
             result = await session.execute(select(Setup))
 
             return Deck(
@@ -25,7 +26,7 @@ class CardsDAO:
             )
 
     async def get_punchlines(self, deck_id: str) -> Deck[PunchlineCard]:
-        async with async_session() as session:
+        async with self.async_session() as session:
             result = await session.execute(select(Punchline))
 
             return Deck(
@@ -37,6 +38,3 @@ class CardsDAO:
                     for (punchline_card,) in result.all()
                 ]
             )
-
-
-cards_dao = CardsDAO()

@@ -16,7 +16,7 @@ from lobby import (
 
 
 @pytest.fixture(scope="session", autouse=True)
-async def set_test_environment() -> None:
+def set_test_environment() -> None:
     config.configure(FORCE_ENV_FOR_DYNACONF="test")
 
 
