@@ -374,7 +374,6 @@ class Lobby:
     def __init__(
         self,
         settings: LobbySettings,
-        /,
         players: Collection[Player],
         lead: Player,
         owner: Player,
