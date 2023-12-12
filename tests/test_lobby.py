@@ -338,14 +338,22 @@ async def test_start_game_after_finish(
     observer: Mock,
     punchline_deck: Deck[PunchlineCard],
 ) -> None:
-    lobby.state.start_game(egor, LobbySettings(winning_score=1, finish_delay=0))
+    lobby.state.start_game(
+        egor,
+        LobbySettings(winning_score=1, finish_delay=0),
+        etups=lobby.setups,
+        punchlines=lobby.punchlines,
+    )
     punchline_card = punchline_deck.get_card()
     yura.hand.append(punchline_card)
     lobby.state.choose_punchline_card(yura, punchline_card)
     lobby.state.pick_turn_winner(punchline_card)
     await asyncio.sleep(0.01)
     lobby.state.start_game(
-        egor, LobbySettings(turn_duration=10, winning_score=2, finish_delay=0)
+        egor,
+        LobbySettings(turn_duration=10, winning_score=2, finish_delay=0),
+        setups=lobby.setups,
+        punchlines=lobby.punchlines,
     )
 
     assert isinstance(lobby.state, Turns)
