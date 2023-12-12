@@ -62,7 +62,7 @@ def test_lobby_choose_punchline_card_not_in_player_hand(
 ) -> None:
     punchline_card = punchline_deck.get_card()
     egor.hand.append(punchline_card)
-    lobby.state.start_game(egor, LobbySettings())
+    lobby.state.start_game(egor, lobby.settings)
     with pytest.raises(CardNotInPlayerHandError):
         lobby.state.choose_punchline_card(anton, punchline_card)
 
@@ -77,7 +77,7 @@ def test_open_punchline_card(
 ) -> None:
     punchline_card = punchline_deck.get_card()
     anton.hand.append(punchline_card)
-    lobby.state.start_game(egor, LobbySettings())
+    lobby.state.start_game(egor, lobby.settings)
     lobby.state.choose_punchline_card(anton, punchline_card)
 
     assert isinstance(lobby.state, Judgement)
@@ -98,7 +98,7 @@ def test_open_punchline_card_member_not_lead(
     punchline_card = punchline_deck.get_card()
     anton.hand.append(punchline_card)
 
-    lobby.state.start_game(egor, LobbySettings())
+    lobby.state.start_game(egor, lobby.settings)
     lobby.state.choose_punchline_card(anton, punchline_card)
 
     # TODO: Use `Lead` instead of `Dealer`
@@ -119,7 +119,7 @@ def test_lobby_all_players_ready(
 ) -> None:
     punchline_card = punchline_deck.get_card()
     anton.hand.append(punchline_card)
-    lobby.state.start_game(egor, LobbySettings())
+    lobby.state.start_game(egor, lobby.settings)
     lobby.state.choose_punchline_card(anton, punchline_card)
 
     assert isinstance(lobby.state, Judgement)
@@ -142,7 +142,7 @@ def test_lobby_lead_choose_punchline_card(
     punchline_card = punchline_deck.get_card()
     anton.hand.append(punchline_card)
 
-    lobby.state.start_game(egor, LobbySettings())
+    lobby.state.start_game(egor, lobby.settings)
     lobby.state.choose_punchline_card(anton, punchline_card)
 
     assert isinstance(lobby.state, Judgement)
@@ -163,7 +163,7 @@ async def test_judgement_turn_ended(
 ) -> None:
     punchline_card = punchline_deck.get_card()
     anton.hand.append(punchline_card)
-    lobby.state.start_game(egor, LobbySettings())
+    lobby.state.start_game(egor, lobby.settings)
     lobby.state.choose_punchline_card(anton, punchline_card)
 
     assert isinstance(lobby.state, Judgement)
@@ -220,7 +220,7 @@ def test_lead_start_game(
     observer: Mock,
     setup_deck: Deck[SetupCard],
 ) -> None:
-    lobby_settings = LobbySettings(turn_duration=30)
+    lobby_settings = LobbySettings(winning_score=1, turn_duration=30)
     lobby.state.start_game(egor, lobby_settings)
     assert isinstance(lobby.state, Turns)
     expected_events = [
@@ -244,7 +244,7 @@ def test_lead_start_game(
 
 @pytest.mark.usefixtures("egor_connected", "yura_connected")
 def test_not_owner_start_game(lobby: Lobby, yura: Player, observer: Mock) -> None:
-    lobby_settings = LobbySettings(turn_duration=30)
+    lobby_settings = LobbySettings(winning_score=1, turn_duration=30)
     with pytest.raises(PlayerNotOwnerError):
         lobby.state.start_game(yura, lobby_settings)
 

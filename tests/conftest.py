@@ -91,7 +91,7 @@ def lobby(
     state_gathering: Gathering,
 ) -> Lobby:
     return Lobby(
-        sessings=LobbySettings(winning_score=1),
+        settings=LobbySettings(winning_score=1),
         players=[],
         lead=egor,
         owner=egor,
