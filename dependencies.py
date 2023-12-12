@@ -19,14 +19,14 @@ CardsDAODependency: TypeAlias = Annotated[CardsDAO, Depends(cards_dao_dependency
 
 
 @asynccontextmanager
-async def lifespan(app_: FastAPI) -> AsyncGenerator[None, None]:
+async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     engine = create_engine()
     await create_tables_if_not_exist(engine)
 
     async_session = async_sessionmaker(engine)
     cards_dao = CardsDAO(async_session)
 
-    app_.override_dependencies = {
+    app.dependency_overrides = {
         cards_dao_dependency: lambda: cards_dao,
     }
 
