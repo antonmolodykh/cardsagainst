@@ -286,6 +286,7 @@ async def test_continue(
     punchline_card = punchline_deck.get_card()
     yura.hand.append(punchline_card)
     lobby.state.choose_punchline_card(yura, punchline_card)
+    lobby.state.pick_turn_winner(punchline_card)
     await asyncio.sleep(0.01)
     lobby.state.continue_game(egor)
 
@@ -321,6 +322,7 @@ async def test_continue_not_owner(
     punchline_card = punchline_deck.get_card()
     yura.hand.append(punchline_card)
     lobby.state.choose_punchline_card(yura, punchline_card)
+    lobby.state.pick_turn_winner(punchline_card)
     await asyncio.sleep(0.01)
 
     with pytest.raises(PlayerNotOwnerError):
