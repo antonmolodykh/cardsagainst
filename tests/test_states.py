@@ -67,3 +67,21 @@ async def test_transit_judgement_to_finished(
     lobby.state.pick_turn_winner(punchline_card)
     await asyncio.sleep(0.01)
     assert isinstance(lobby.state, Finished)
+
+
+async def test_transit_finished_to_turns(
+    lobby: Lobby,
+    egor: Player,
+    anton: Player,
+) -> None:
+    next_setup_card = lobby.setups.cards[-1]
+    lobby.add_player(anton)
+    lobby.transit_to(Finished(anton))
+    punchline_card = lobby.punchlines.get_card()
+    lobby.table.append(CardOnTable(punchline_card, anton))
+
+    lobby.state.continue_game(egor)
+
+    assert isinstance(lobby.state, Turns)
+    assert lobby.lead == anton
+    assert lobby.state.setup == next_setup_card

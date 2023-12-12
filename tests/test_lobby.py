@@ -1,5 +1,5 @@
 import asyncio
-from unittest.mock import Mock, call
+from unittest.mock import ANY, Mock, call
 
 import pytest
 
@@ -271,5 +271,40 @@ async def test_finish_game(
     expected_events = [
         call.egor.game_finished(yura),
         call.yura.game_finished(yura),
+    ]
+    observer.assert_has_calls(expected_events)
+
+
+async def test_continue(
+    lobby: Lobby,
+    egor: Player,
+    yura: Player,
+    observer: Mock,
+    punchline_deck: Deck[PunchlineCard],
+) -> None:
+    lobby.state.start_game(egor, LobbySettings(winner_score=1, finish_delay=0))
+    punchline_card = punchline_deck.get_card()
+    yura.hand.append(punchline_card)
+    lobby.state.choose_punchline_card(yura, punchline_card)
+    await asyncio.sleep(0.01)
+    lobby.state.continue_game(egor, punchline_card)
+
+    assert isinstance(lobby.state, Turns)
+
+    expected_events = [
+        call.egor.turn_started(
+            setup=lobby.state.setup,
+            turn_duration=lobby.settings.turn_duration,
+            lead=egor,
+            turn_count=2,
+            card=ANY
+        ),
+        call.yura.turn_started(
+            setup=lobby.state.setup,
+            turn_duration=lobby.settings.turn_duration,
+            lead=egor,
+            turn_count=2,
+            card=ANY
+        ),
     ]
     observer.assert_has_calls(expected_events)
