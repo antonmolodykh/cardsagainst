@@ -287,7 +287,7 @@ async def test_continue(
     yura.hand.append(punchline_card)
     lobby.state.choose_punchline_card(yura, punchline_card)
     await asyncio.sleep(0.01)
-    lobby.state.continue_game(egor, punchline_card)
+    lobby.state.continue_game(egor)
 
     assert isinstance(lobby.state, Turns)
 
@@ -324,4 +324,4 @@ async def test_continue_not_owner(
     await asyncio.sleep(0.01)
 
     with pytest.raises(PlayerNotOwnerError):
-        lobby.state.continue_game(yura, punchline_card)
+        lobby.state.continue_game(yura)
