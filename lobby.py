@@ -366,6 +366,7 @@ class Finished(State):
         self.lobby.setups = setups
         self.lobby.punchlines = punchlines
         self.lobby.table.clear()
+        self.lobby.turn_count = 0
 
         for pl in self.lobby.all_players:
             pl.hand.clear()

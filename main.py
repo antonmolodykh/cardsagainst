@@ -76,7 +76,7 @@ class PlayerIdData(ApiModel):
 
 
 class SetupData(ApiModel):
-    uuid: str
+    id: int
     text: str
     case: str
     starts_with_punchline: bool
@@ -84,7 +84,7 @@ class SetupData(ApiModel):
     @classmethod
     def from_setup(cls, setup: SetupCard):
         return cls(
-            uuid=str(setup.id),
+            id=setup.id,
             text=setup.text,
             case=setup.case,
             starts_with_punchline=setup.starts_with_punchline,
@@ -92,12 +92,12 @@ class SetupData(ApiModel):
 
 
 class PunchlineData(ApiModel):
-    uuid: str
+    id: str
     text: list[tuple[str, list[str]]]
 
     @classmethod
     def from_card(cls, card: PunchlineCard):
-        return cls(uuid=str(card.id), text=card.text)
+        return cls(id=card.id, text=card.text)
 
 
 class CardOnTableData(ApiModel):
@@ -113,7 +113,7 @@ class TableCardOpenedData(ApiModel):
 
 class TurnEndedData(ApiModel):
     winner_uuid: str
-    card_uuid: str
+    card_id: int
     score: int
 
 
@@ -214,7 +214,7 @@ class RemotePlayer(LobbyObserver):
                 id=1,
                 type="turnEnded",
                 data=TurnEndedData(
-                    winner_uuid=winner.uuid, card_uuid=str(card.id), score=winner.score
+                    winner_uuid=winner.uuid, card_id=card.id, score=winner.score
                 ),
             )
         )
@@ -303,7 +303,7 @@ class StartGameData(ApiModel):
 
 
 class MakeTurnData(ApiModel):
-    uuid: str
+    id: int
 
 
 class OpenTableCardData(ApiModel):
@@ -311,7 +311,7 @@ class OpenTableCardData(ApiModel):
 
 
 class PickTurnWinnerData(ApiModel):
-    uuid: str
+    id: int
 
 
 class TurnStartedData(ApiModel):
@@ -484,7 +484,7 @@ async def handle_event(json_data, player) -> None:
         case "makeTurn":
             event = Event[MakeTurnData].model_validate(json_data)
             try:
-                card = lobby.punchlines.get_card_by_uuid(int(event.data.uuid))
+                card = lobby.punchlines.get_card_by_uuid(int(event.data.id))
             except KeyError:
                 print("unknown card")
                 return
@@ -495,7 +495,7 @@ async def handle_event(json_data, player) -> None:
         case "pickTurnWinner":
             event = Event[PickTurnWinnerData].model_validate(json_data)
             try:
-                card = lobby.punchlines.get_card_by_uuid(int(event.data.uuid))
+                card = lobby.punchlines.get_card_by_uuid(int(event.data.id))
             except KeyError:
                 return
             lobby.state.pick_turn_winner(card)
