@@ -2,21 +2,18 @@ from __future__ import annotations
 
 import asyncio
 import traceback
-from contextlib import asynccontextmanager
 from enum import StrEnum
-from typing import AsyncGenerator, Generic, TypeVar
+from typing import Generic, TypeVar
 from uuid import uuid4
 
 from fastapi import FastAPI, HTTPException, Query, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ConfigDict
 from pydantic.alias_generators import to_camel
-from sqlalchemy.ext.asyncio import async_sessionmaker
 from starlette.websockets import WebSocketDisconnect
 from typing_extensions import Annotated
 
-from dao import CardsDAO, CardsDAODependency, cards_dao_dependency
-from db import create_engine, create_tables_if_not_exist
+from dependencies import CardsDAODependency, lifespan
 from lobby import (
     CardOnTable,
     Gathering,
@@ -33,22 +30,6 @@ from lobby import (
 
 lobby: Lobby = None
 observers: list[LobbyObserver] = []
-
-
-@asynccontextmanager
-async def lifespan(app_: FastAPI) -> AsyncGenerator[None, None]:
-    engine = create_engine()
-    await create_tables_if_not_exist(engine)
-
-    async_session = async_sessionmaker(engine)
-    cards_dao = CardsDAO(async_session)
-
-    app_.override_dependencies = {
-        cards_dao_dependency: lambda: cards_dao,
-    }
-
-    yield
-
 
 app = FastAPI(lifespan=lifespan)
 

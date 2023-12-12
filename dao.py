@@ -1,6 +1,3 @@
-from typing import Annotated, TypeAlias
-
-from fastapi import Depends
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
@@ -41,11 +38,3 @@ class CardsDAO:
                     for (punchline_card,) in result.all()
                 ]
             )
-
-
-def cards_dao_dependency() -> CardsDAO:
-    # Will be injected on startup
-    raise NotImplementedError
-
-
-CardsDAODependency: TypeAlias = Annotated[CardsDAO, Depends(cards_dao_dependency)]
