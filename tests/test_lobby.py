@@ -38,7 +38,7 @@ def test_lobby_choose_punchline_card(
 ) -> None:
     punchline_card = punchline_deck.get_card()
     anton.hand.append(punchline_card)
-    lobby.state.start_game(egor, LobbySettings())
+    lobby.state.start_game(egor, lobby.settings)
 
     # TODO: Maybe move this method to player?
     lobby.state.choose_punchline_card(anton, punchline_card)
