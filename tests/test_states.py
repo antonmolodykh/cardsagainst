@@ -74,11 +74,11 @@ async def test_transit_finished_to_turns(
     egor: Player,
     anton: Player,
 ) -> None:
-    next_setup_card = lobby.setups.cards[-1]
     lobby.add_player(anton)
-    lobby.transit_to(Finished(anton))
+    lobby.transit_to(Finished(anton, lobby.setups.get_card()))
     punchline_card = lobby.punchlines.get_card()
     lobby.table.append(CardOnTable(punchline_card, anton))
+    next_setup_card = lobby.setups.cards[-1]
 
     lobby.state.continue_game(egor)
 
