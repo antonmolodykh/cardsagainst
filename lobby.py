@@ -102,7 +102,7 @@ class PunchlineCard:
 class Profile(BaseModel):
     name: str
     emoji: str
-    background_color: str # TODO: remove
+    background_color: str  # TODO: remove
 
 
 class Player:
@@ -551,7 +551,7 @@ class Lobby:
             if card_on_table.player is player:
                 self.punchlines.dump([card_on_table.card])
                 self.table.remove(card_on_table)
-                print(f'Card is dumped and removed from the table. table={self.table}')
+                print(f"Card is dumped and removed from the table. table={self.table}")
                 break
 
         for pl in self.all_players_except(player):

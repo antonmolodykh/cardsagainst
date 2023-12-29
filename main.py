@@ -400,20 +400,31 @@ async def websocket_endpoint(
     lobby_token: Annotated[str, Query(alias="lobbyToken")],
     cards_dao: CardsDAODependency,
 ):
+    await websocket.accept()
     try:
         lobby = lobbies[lobby_token]
     except KeyError:
-        raise HTTPException(status_code=404)
+        await websocket.send_json(
+            {"type": "error", "data": {"status": 404, "message": "Lobby not found"}}
+        )
+        await websocket.close()
+        return
 
     try:
         player = players[player_token]
     except KeyError:
-        raise HTTPException(status_code=404)
+        await websocket.send_json(
+            {"type": "error", "data": {"status": 404, "message": "Player not found"}}
+        )
+        await websocket.close()
+        return
 
     if player not in lobby.all_players:
-        raise HTTPException(status_code=404)
-
-    await websocket.accept()
+        await websocket.send_json(
+            {"type": "error", "data": {"status": 404, "message": "Player not found"}}
+        )
+        await websocket.close()
+        return
 
     if player_token in remove_player_tasks:
         remove_player_tasks[player_token].cancel()
