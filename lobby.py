@@ -102,7 +102,7 @@ class PunchlineCard:
 class Profile(BaseModel):
     name: str
     emoji: str
-    background_color: str
+    background_color: str # TODO: remove
 
 
 class Player:
@@ -249,9 +249,22 @@ class Turns(State):
     async def set_timer(self, turn_duration: int) -> None:
         await asyncio.sleep(turn_duration)
         for player in self.lobby.players:
+            if not player.is_connected:
+                continue
             if not player.is_ready:
-                # TODO: игрок не участвует, карту потом не выдаем
                 self.choose_punchline_card(player, random.choice(player.hand))
+
+        self.to_judgement()
+
+    def make_turn(self, player: Player, card: PunchlineCard) -> None:
+        self.choose_punchline_card(player, card)
+
+        for pl in self.lobby.players:
+            if pl.is_connected and not pl.is_ready:
+                return
+
+        self.timer.cancel()
+        self.to_judgement()
 
     def choose_punchline_card(self, player: Player, card: PunchlineCard) -> None:
         if card not in player.hand:
@@ -263,11 +276,7 @@ class Turns(State):
         for pl in self.lobby.all_players:
             pl.observer.player_ready(player)
 
-        if len(self.lobby.table) == len(self.lobby.players):
-            self.to_judgement()
-
     def to_judgement(self):
-        self.timer.cancel()
         self.lobby.transit_to(Judgement(self.setup))
         random.shuffle(self.lobby.table)
         for pl in self.lobby.all_players:
@@ -533,7 +542,13 @@ class Lobby:
             self.players.remove(player)
 
         self.punchlines.dump(player.hand)
-        # TODO: выкидывать карточку со стола, если карта покинувшего уже лежит
+        for card_on_table in self.table:
+            if card_on_table.player is player:
+                self.punchlines.dump([card_on_table.card])
+                self.table.remove(card_on_table)
+                print(f'Card is dumped and removed from the table. table={self.table}')
+                break
+
         for pl in self.all_players_except(player):
             pl.observer.player_left(player)
         print(f"Removed. self.lead={self.lead}, self.players={self.players}")

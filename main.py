@@ -188,7 +188,6 @@ class RemotePlayer(LobbyObserver):
                     turn_duration=turn_duration,
                     lead_uuid=lead.uuid,
                     turn_count=turn_count,
-                    is_leading=self.player is lead,
                     card=PunchlineData.from_card(card) if card else None,
                 ),
             )
@@ -320,7 +319,6 @@ class TurnStartedData(ApiModel):
     setup: SetupData
     turn_duration: int | None
     lead_uuid: str
-    is_leading: bool
     turn_count: int
     card: PunchlineData | None = None
 
@@ -333,7 +331,6 @@ class LobbyState(ApiModel):
     setup: SetupData | None
     timeout: int | None
     lead_uuid: str | None
-    is_leading: bool
     owner_uuid: str | None
     self_uuid: str | None
     turn_count: int | None
@@ -390,7 +387,7 @@ async def connect(
     players[player_token] = player
 
     return ConnectResponse(
-        host="ws://192.168.0.17:9999/connect",
+        host=config.ws_url,
         player_token=player_token,
         lobby_token=lobby_token,
     )
@@ -403,8 +400,6 @@ async def websocket_endpoint(
     lobby_token: Annotated[str, Query(alias="lobbyToken")],
     cards_dao: CardsDAODependency,
 ):
-    await websocket.accept()
-
     try:
         lobby = lobbies[lobby_token]
     except KeyError:
@@ -417,6 +412,8 @@ async def websocket_endpoint(
 
     if player not in lobby.all_players:
         raise HTTPException(status_code=404)
+
+    await websocket.accept()
 
     if player_token in remove_player_tasks:
         remove_player_tasks[player_token].cancel()
@@ -460,7 +457,6 @@ async def websocket_endpoint(
                 ),
                 timeout=lobby.settings.turn_duration,
                 lead_uuid=lobby.lead.uuid,
-                is_leading=player is lobby.lead,  # TODO: Remove later
                 owner_uuid=lobby.owner.uuid,
                 self_uuid=player.uuid,
                 selected_card=(
@@ -472,7 +468,7 @@ async def websocket_endpoint(
 
     async def run_remove_player():
         print(f"Player removal scheduled, player_token={player_token}")
-        await asyncio.sleep(30)
+        await asyncio.sleep(config.player_removal_delay)
         lobby.remove_player(player)
         del players[player_token]
         if not lobby.all_players:
