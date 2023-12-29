@@ -180,6 +180,11 @@ class LobbySettings(BaseModel):
 class State:
     lobby: Lobby
 
+    def make_turn(self, player: Player, card: PunchlineCard) -> None:
+        raise Exception(
+            f"method `make_turn` not expected in state {type(self).__name__}"
+        )
+
     def choose_punchline_card(self, player: Player, card: PunchlineCard):
         raise Exception(
             f"method `choose_punchline_card` not expected in state {type(self).__name__}"

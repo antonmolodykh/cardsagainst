@@ -367,7 +367,7 @@ async def connect(
             punchlines=punchlines,
             state=Gathering(),
         )
-        lobby_token = uuid4().hex
+        lobby_token = uuid4().hex[:8]
         lobbies[lobby_token] = lobby
         print(f"Lobby created. lobbies={lobbies}")
 
@@ -383,7 +383,7 @@ async def connect(
     except GameAlreadyStartedError:
         raise HTTPException(status_code=403)
 
-    player_token = uuid4().hex
+    player_token = uuid4().hex[:8]
     players[player_token] = player
 
     return ConnectResponse(
@@ -520,7 +520,7 @@ async def handle_event(
             except KeyError:
                 print("unknown card")
                 return
-            lobby.state.choose_punchline_card(player, card)
+            lobby.state.make_turn(player, card)
         case "openTableCard":
             event = Event[OpenTableCardData].model_validate(json_data)
             lobby.state.open_punchline_card(player, lobby.table[event.data.index])
