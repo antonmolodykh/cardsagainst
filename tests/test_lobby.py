@@ -331,6 +331,20 @@ async def test_continue_not_owner(
 
 
 @pytest.mark.usefixtures("egor_connected", "yura_connected")
+async def test_continue_score(
+    lobby: Lobby,
+    egor: Player,
+    yura: Player,
+    observer: Mock,
+    punchline_deck: Deck[PunchlineCard],
+) -> None:
+    # TODO: Egor и Anton набрали нужное количество очков
+    #   Anton выиграл ход
+    #   Надо проверить, что не будет состояние Finished
+    pass
+
+
+@pytest.mark.usefixtures("egor_connected", "yura_connected")
 async def test_start_game_after_finish(
     lobby: Lobby,
     egor: Player,
