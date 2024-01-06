@@ -39,11 +39,7 @@ async def test_lobby_start_game_set_owner_as_lead(
 
 @pytest.mark.usefixtures("egor_connected", "anton_connected", "game_started")
 async def test_lobby_choose_punchline_card(
-    lobby: Lobby,
-    egor: Player,
-    anton: Player,
-    punchline_deck: Deck[PunchlineCard],
-    observer: Mock,
+    lobby: Lobby, egor: Player, anton: Player, observer: Mock
 ) -> None:
     # FIXME: turn_duration вообще-то nullable, но это не учитывается
     #  при запуске таймера
