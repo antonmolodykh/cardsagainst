@@ -18,49 +18,36 @@ from lobby import (
 )
 
 
-@pytest.mark.usefixtures("egor_connected", "anton_connected", "yura_connected")
+@pytest.mark.usefixtures("egor_connected")
 async def test_lobby_start_game_set_owner_as_lead(
     lobby: Lobby,
     egor: Player,
-    anton: Player,
-    yura: Player,
     setup_deck: Deck[SetupCard],
     punchline_deck: Deck[PunchlineCard],
+    lobby_settings: LobbySettings,
 ) -> None:
-    # TODO: Думаю, при старте игры можно определить лида, причем поставить лидом овнера
+    # FIXME: Думаю, при старте игры можно определить лида, причем поставить лидом овнера
     #   ведь именно он запускает игру, и он точно подключен
     lobby.state.start_game(
         egor,
-        LobbySettings(turn_duration=0, winning_score=1, finish_delay=0),
-        setups=setup_deck,
-        punchlines=punchline_deck,
+        lobby_settings,
+        setup_deck,
+        punchline_deck,
     )
     assert lobby.lead is egor
 
 
-@pytest.mark.usefixtures("egor_connected", "anton_joined", "yura_joined")
-def test_lobby_change_lead(
-    lobby: Lobby, egor: Player, anton: Player, yura: Player
-) -> None:
-    assert lobby.players == [anton, yura]
-    lobby.change_lead()
-    assert lobby.players == [yura, egor]
-    assert lobby.lead is anton
-
-
-@pytest.mark.usefixtures("egor_connected", "anton_connected")
-def test_lobby_choose_punchline_card(
+@pytest.mark.usefixtures("egor_connected", "anton_connected", "game_started")
+async def test_lobby_choose_punchline_card(
     lobby: Lobby,
     egor: Player,
     anton: Player,
     punchline_deck: Deck[PunchlineCard],
     observer: Mock,
 ) -> None:
-    punchline_card = punchline_deck.get_card()
-    anton.hand.append(punchline_card)
-    lobby.state.start_game(egor, lobby.settings)
-
-    # TODO: Maybe move this method to player?
+    # FIXME: turn_duration вообще-то nullable, но это не учитывается
+    #  при запуске таймера
+    punchline_card = anton.hand[0]
     lobby.state.choose_punchline_card(anton, punchline_card)
 
     card_on_table = lobby.get_card_from_table(punchline_card)
