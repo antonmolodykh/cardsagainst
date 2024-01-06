@@ -112,10 +112,18 @@ def lobby(
 
 
 @pytest.fixture
-def egor_connected(egor: Player, observer: Mock) -> None:
+def egor_joined(lobby: Lobby, egor: Player) -> None:
+    lobby.add_player(egor)
+
+
+@pytest.fixture
+def egor_connected(
+    egor_joined: None, lobby: Lobby, egor: Player, observer: Mock
+) -> None:
     player_mock = Mock(LobbyObserver)
     observer.attach_mock(player_mock, "egor")
     egor.observer = player_mock
+    lobby.set_connected(egor)
 
 
 @pytest.fixture
