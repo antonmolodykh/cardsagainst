@@ -91,17 +91,18 @@ def lobby(
     observer: Mock,
     state_gathering: Gathering,
 ) -> Lobby:
-    return Lobby(
+    lobby = Lobby(
         settings=LobbySettings(winning_score=1),
         players=[],
-        lead=egor,
-        owner=egor,
         state=state_gathering,
         # TODO: state gathering determines the setups and punchlines
         # Move?
         setups=setup_deck,
         punchlines=punchline_deck,
     )
+    # TODO: Почему лобби создается без owner?
+    lobby.owner = egor
+    return lobby
 
 
 @pytest.fixture

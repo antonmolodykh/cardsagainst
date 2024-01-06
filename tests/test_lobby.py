@@ -18,7 +18,27 @@ from lobby import (
 )
 
 
-@pytest.mark.usefixtures("anton_joined", "yura_joined")
+@pytest.mark.usefixtures("egor_connected", "anton_connected", "yura_connected")
+async def test_lobby_start_game_set_owner_as_lead(
+    lobby: Lobby,
+    egor: Player,
+    anton: Player,
+    yura: Player,
+    setup_deck: Deck[SetupCard],
+    punchline_deck: Deck[PunchlineCard],
+) -> None:
+    # TODO: Думаю, при старте игры можно определить лида, причем поставить лидом овнера
+    #   ведь именно он запускает игру, и он точно подключен
+    lobby.state.start_game(
+        egor,
+        LobbySettings(turn_duration=0, winning_score=1, finish_delay=0),
+        setups=setup_deck,
+        punchlines=punchline_deck,
+    )
+    assert lobby.lead is egor
+
+
+@pytest.mark.usefixtures("egor_connected", "anton_joined", "yura_joined")
 def test_lobby_change_lead(
     lobby: Lobby, egor: Player, anton: Player, yura: Player
 ) -> None:
