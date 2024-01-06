@@ -18,8 +18,6 @@ from lobby import (
     Turns,
 )
 
-# TODO: Проверить, что будет, если не все карты открыты
-
 
 @pytest.mark.usefixtures("egor_connected")
 async def test_lobby_start_game_set_owner_as_lead(
