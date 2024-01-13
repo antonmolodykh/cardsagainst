@@ -184,6 +184,11 @@ class LobbySettings(BaseModel):
 class State:
     lobby: Lobby
 
+    def handle_player_removal(self):
+        raise Exception(
+            f"method `handle_player_removal` not expected in state {type(self).__name__}"
+        )
+
     def make_turn(self, player: Player, card: PunchlineCard) -> None:
         raise Exception(
             f"method `make_turn` not expected in state {type(self).__name__}"
@@ -267,6 +272,9 @@ class Turns(State):
                 self.choose_punchline_card(player, random.choice(player.hand))
 
         self.end_turn()
+
+    def handle_player_removal(self):
+        self.try_end_turn()
 
     def make_turn(self, player: Player, card: PunchlineCard) -> None:
         self.choose_punchline_card(player, card)
@@ -572,3 +580,4 @@ class Lobby:
         for pl in self.all_players_except(player):
             pl.observer.player_left(player)
         print(f"Removed. self.lead={self.lead}, self.players={self.players}")
+        self.state.handle_player_removal()
