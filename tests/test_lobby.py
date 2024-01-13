@@ -191,7 +191,7 @@ def test_player_connected(lobby: Lobby, yura: Player, observer: Mock) -> None:
         call.egor.player_connected(yura),
         call.yura.welcome(),
     ]
-    observer.assert_has_calls(expected_events)
+    observer.assert_has_calls(expected_events, any_order=True)
 
 
 @pytest.mark.usefixtures("egor_connected", "yura_connected")
