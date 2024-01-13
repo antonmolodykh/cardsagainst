@@ -398,3 +398,20 @@ async def test_start_game_after_finish(
         ),
     ]
     observer.yura.assert_has_calls(expected_events)
+
+
+@pytest.mark.usefixtures(
+    "egor_connected",
+    "yura_connected",
+    "anton_connected",
+    "game_started",
+)
+def test_player_not_ready_disconnected_transit_to_judgement(
+    lobby: Lobby,
+    anton: Player,
+    yura: Player,
+    egor: Player,
+) -> None:
+    lobby.state.make_turn(yura, yura.hand[0])
+    lobby.remove_player(anton)
+    assert isinstance(lobby.state, Judgement)
