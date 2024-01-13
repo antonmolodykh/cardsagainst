@@ -189,6 +189,7 @@ def test_player_connected(lobby: Lobby, yura: Player, observer: Mock) -> None:
 
     expected_events = [
         call.egor.player_connected(yura),
+        call.yura.welcome(),
     ]
     observer.assert_has_calls(expected_events)
 
