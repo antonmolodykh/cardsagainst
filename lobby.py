@@ -84,6 +84,9 @@ class LobbyObserver:
     def game_finished(self, winner: Player):
         pass
 
+    def welcome(self):
+        pass
+
 
 @dataclass
 class SetupCard:

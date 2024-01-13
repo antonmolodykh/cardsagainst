@@ -233,6 +233,52 @@ class RemotePlayer(LobbyObserver):
             )
         )
 
+    def welcome(self):
+        selected_card = self.lobby.get_selected_card(self.player)
+        self._queue.put_nowait(
+            Event(
+                id=1,
+                type="welcome",
+                data=LobbyState(
+                    state=GameState(type(self.lobby.state).__name__.lower()),
+                    turn_count=self.lobby.turn_count,
+                    players=[
+                        get_player_data_from_player(player)
+                        for player in self.lobby.all_players
+                    ],
+                    table=[
+                        CardOnTableData(
+                            card=PunchlineData.from_card(card_on_table.card)
+                            if card_on_table.is_open
+                            else None,
+                            is_picked=is_card_picked(self.lobby, card_on_table),
+                            author=(
+                                card_on_table.player.profile.name
+                                if is_card_picked(self.lobby, card_on_table)
+                                else None
+                            ),
+                        )
+                        for card_on_table in self.lobby.table
+                    ],
+                    hand=[PunchlineData.from_card(item) for item in self.player.hand],
+                    setup=(
+                        SetupData.from_setup(self.lobby.state.setup)
+                        if isinstance(self.lobby.state, Judgement | Turns)
+                        else None
+                    ),
+                    timeout=self.lobby.settings.turn_duration,
+                    lead_uuid=self.lobby.lead.uuid,
+                    owner_uuid=self.lobby.owner.uuid,
+                    self_uuid=self.player.uuid,
+                    selected_card=(
+                        PunchlineData.from_card(selected_card)
+                        if selected_card
+                        else None
+                    ),
+                ),
+            )
+        )
+
     async def send_messages(self):
         while True:
             event = await self._queue.get()
@@ -435,47 +481,6 @@ async def websocket_endpoint(
     player.observer = observer
 
     lobby.set_connected(player)
-    selected_card = lobby.get_selected_card(player)
-    await websocket.send_json(
-        Event(
-            id=1,
-            type="welcome",
-            data=LobbyState(
-                state=GameState(type(lobby.state).__name__.lower()),
-                turn_count=lobby.turn_count,
-                players=[
-                    get_player_data_from_player(player) for player in lobby.all_players
-                ],
-                table=[
-                    CardOnTableData(
-                        card=PunchlineData.from_card(card_on_table.card)
-                        if card_on_table.is_open
-                        else None,
-                        is_picked=is_card_picked(lobby, card_on_table),
-                        author=(
-                            card_on_table.player.profile.name
-                            if is_card_picked(lobby, card_on_table)
-                            else None
-                        ),
-                    )
-                    for card_on_table in lobby.table
-                ],
-                hand=[PunchlineData.from_card(item) for item in player.hand],
-                setup=(
-                    SetupData.from_setup(lobby.state.setup)
-                    if isinstance(lobby.state, Judgement | Turns)
-                    else None
-                ),
-                timeout=lobby.settings.turn_duration,
-                lead_uuid=lobby.lead.uuid,
-                owner_uuid=lobby.owner.uuid,
-                self_uuid=player.uuid,
-                selected_card=(
-                    PunchlineData.from_card(selected_card) if selected_card else None
-                ),
-            ),
-        ).model_dump(by_alias=True)
-    )
 
     async def run_remove_player():
         print(f"Player removal scheduled, player_token={player_token}")
