@@ -8,6 +8,7 @@ from lobby import (
     Deck,
     Judgement,
     Lobby,
+    LobbyObserver,
     LobbySettings,
     NotAllCardsOpenedError,
     Player,
@@ -185,6 +186,9 @@ def test_player_joined(lobby: Lobby, yura: Player, observer: Mock) -> None:
 
 @pytest.mark.usefixtures("egor_connected", "yura_joined")
 def test_player_connected(lobby: Lobby, yura: Player, observer: Mock) -> None:
+    player_mock = Mock(LobbyObserver)
+    observer.attach_mock(player_mock, "yura")
+    yura.observer = player_mock
     lobby.set_connected(yura)
 
     expected_events = [
