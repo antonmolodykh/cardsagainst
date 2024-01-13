@@ -125,6 +125,7 @@ class Player:
 
     def set_connected(self) -> None:
         self.is_connected = True
+        self.observer.welcome()
 
     def set_disconnected(self) -> None:
         self.observer = LobbyObserver()
@@ -250,9 +251,12 @@ class Gathering(State):
 
 
 class Turns(State):
-    def __init__(self, setup: SetupCard, turn_duration: int):
+    timer: Task | None = None
+
+    def __init__(self, setup: SetupCard, turn_duration: int | None):
         self.setup = setup
-        self.timer: Task = asyncio.create_task(self.set_timer(turn_duration))
+        if turn_duration is not None:
+            self.timer = asyncio.create_task(self.set_timer(turn_duration))
 
     async def set_timer(self, turn_duration: int) -> None:
         await asyncio.sleep(turn_duration)
@@ -262,17 +266,31 @@ class Turns(State):
             if not player.is_ready:
                 self.choose_punchline_card(player, random.choice(player.hand))
 
-        self.to_judgement()
+        self.end_turn()
 
     def make_turn(self, player: Player, card: PunchlineCard) -> None:
         self.choose_punchline_card(player, card)
+        self.try_end_turn()
 
+    def try_end_turn(self) -> None:
         for pl in self.lobby.players:
             if pl.is_connected and not pl.is_ready:
                 return
 
-        self.timer.cancel()
-        self.to_judgement()
+        if self.timer:
+            self.timer.cancel()
+        self.end_turn()
+
+    def end_turn(self):
+        random.shuffle(self.lobby.table)
+        for pl in self.lobby.all_players:
+            pl.observer.all_players_ready()
+
+        if self.lobby.lead:
+            self.lobby.transit_to(Judgement(self.setup))
+        else:
+            # self.lobby.transit_to(Voting(self.setup))
+            raise NotImplemented
 
     def choose_punchline_card(self, player: Player, card: PunchlineCard) -> None:
         if card not in player.hand:
@@ -283,12 +301,6 @@ class Turns(State):
         player.is_ready = True
         for pl in self.lobby.all_players:
             pl.observer.player_ready(player)
-
-    def to_judgement(self):
-        self.lobby.transit_to(Judgement(self.setup))
-        random.shuffle(self.lobby.table)
-        for pl in self.lobby.all_players:
-            pl.observer.all_players_ready()
 
 
 class Judgement(State):
