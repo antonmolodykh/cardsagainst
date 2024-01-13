@@ -318,6 +318,14 @@ class Judgement(State):
         self.setup = setup
         self.winner = None
 
+    def handle_player_removal(self):
+        if self.lobby.lead is None:
+            self.start_voting()
+
+    def start_voting(self):
+        # self.lobby.transit_to(Voting(self.setup))
+        raise NotImplemented
+
     def open_punchline_card(self, player: Player, card_on_table: CardOnTable) -> None:
         if self.lobby.lead is not player:
             raise PlayerNotDealerError
@@ -564,8 +572,7 @@ class Lobby:
 
     def remove_player(self, player: Player):
         if player is self.lead:
-            self.lead = None  # пускай никто не будет лидом на гезеринге
-            # TODO: New Turn, reorder lead
+            self.lead = None
         if player in self.players:
             self.players.remove(player)
 
