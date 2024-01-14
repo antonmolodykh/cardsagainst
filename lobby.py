@@ -219,6 +219,11 @@ class State:
             f"method `continue_game` not expected in state {type(self).__name__}"
         )
 
+    def end_turn(self):
+        raise Exception(
+            f"method `end_turn` not expected in state {type(self).__name__}"
+        )
+
 
 class Gathering(State):
     def start_game(
@@ -244,22 +249,9 @@ class Gathering(State):
 
 
 class Turns(State):
-    timer: Task | None = None
-
-    def __init__(self, setup: SetupCard, turn_duration: int | None):
+    def __init__(self, setup: SetupCard, timer: Task):
         self.setup = setup
-        if turn_duration is not None:
-            self.timer = asyncio.create_task(self.set_timer(turn_duration))
-
-    async def set_timer(self, turn_duration: int) -> None:
-        await asyncio.sleep(turn_duration)
-        for player in self.lobby.players:
-            if not player.is_connected:
-                continue
-            if not player.is_ready:
-                self.choose_punchline_card(player, random.choice(player.hand))
-
-        self.end_turn()
+        self.timer = timer
 
     def handle_player_removal(self):
         self.try_end_turn()
@@ -273,11 +265,14 @@ class Turns(State):
             if pl.is_connected and not pl.is_ready:
                 return
 
-        if self.timer:
-            self.timer.cancel()
+        self.timer.cancel()
         self.end_turn()
 
     def end_turn(self):
+        for player in self.lobby.players:
+            if player.is_connected and not player.is_ready:
+                self.choose_punchline_card(player, random.choice(player.hand))
+
         random.shuffle(self.lobby.table)
         for pl in self.lobby.all_players:
             pl.observer.all_players_ready()
@@ -479,7 +474,13 @@ class Lobby:
         self.change_lead()
         new_setup = self.setups.get_card()
         self.turn_count += 1
-        self.transit_to(Turns(new_setup, self.settings.turn_duration))
+
+        async def turn_timer() -> None:
+            if turn_duration := self.settings.turn_duration:
+                await asyncio.sleep(turn_duration)
+                self.state.end_turn()
+
+        self.transit_to(Turns(new_setup, asyncio.create_task(turn_timer())))
 
         for pl in self.all_players:
             pl.is_ready = False
