@@ -360,10 +360,7 @@ class Judgement(State):
         asyncio.create_task(start_turn())
 
     def start_turn(self):
-        # TODO: Move to common start turn
-        self.lobby.change_lead()
         self.lobby.setups.dump([self.setup])
-
         self.lobby.start_turn()
 
     def finish_game(self, winner: Player):
@@ -379,9 +376,7 @@ class Finished(State):
         self.winner = winner
 
     def start_turn(self):
-        self.lobby.change_lead()
         self.lobby.setups.dump([self.setup])
-
         self.lobby.start_turn()
 
     def continue_game(self, player: Player) -> None:
@@ -474,10 +469,14 @@ class Lobby:
 
     def change_lead(self) -> None:
         # TODO: можем на дисконектнутого смениться?
-        self.players.append(self.lead)
+        # TODO: Выбирать, нужен ли лид по режиму игры
+        if self.lead:
+            self.players.append(self.lead)
+        # TODO: Что делать в ситуации, когда не осталось игроков?
         self.lead = self.players.pop(0)
 
     def start_turn(self):
+        self.change_lead()
         new_setup = self.setups.get_card()
         self.turn_count += 1
         self.transit_to(Turns(new_setup, self.settings.turn_duration))
@@ -534,10 +533,7 @@ class Lobby:
         if not isinstance(self.state, Gathering):
             raise GameAlreadyStartedError
 
-        if not self.lead:
-            self.lead = player
-        else:
-            self.players.append(player)
+        self.players.append(player)
 
         for pl in self.all_players:
             pl.observer.player_joined(player)

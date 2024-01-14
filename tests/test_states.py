@@ -1,5 +1,7 @@
 import asyncio
 
+import pytest
+
 from lobby import (
     CardOnTable,
     Deck,
@@ -14,9 +16,11 @@ from lobby import (
 )
 
 
+@pytest.mark.usefixtures("egor_connected", "yura_connected")
 async def test_start_game_transit_to_turns(
     lobby: Lobby,
     egor: Player,
+    yura: Player,
     lobby_settings: LobbySettings,
     setup_deck: Deck[SetupCard],
     punchline_deck: Deck[PunchlineCard],
@@ -25,18 +29,16 @@ async def test_start_game_transit_to_turns(
     isinstance(lobby.state, Turns)
 
 
+@pytest.mark.usefixtures("egor_connected", "anton_connected", "game_started")
 async def test_transit_turns_to_judgement(
     lobby: Lobby,
     anton: Player,
     punchline_deck: Deck[PunchlineCard],
     setup_deck: Deck[SetupCard],
 ) -> None:
-    setup_card = setup_deck.get_card()
-    lobby.add_player(anton)
-    punchline_card = punchline_deck.get_card()
-    anton.add_punchline_card(punchline_card)
-    lobby.transit_to(Turns(setup_card, 1))
-    lobby.state.make_turn(anton, punchline_card)
+    assert isinstance(lobby.state, Turns)
+    setup_card = lobby.state.setup
+    lobby.state.make_turn(anton, anton.hand[0])
     await asyncio.sleep(0.01)
     assert isinstance(lobby.state, Judgement)
     assert lobby.state.setup is setup_card
@@ -57,6 +59,7 @@ async def test_transit_judgement_to_turns(
     assert lobby.state.setup is next_setup_card
 
 
+@pytest.mark.usefixtures("egor_connected", "anton_connected", "game_started")
 async def test_transit_judgement_to_finished(
     lobby: Lobby,
     egor: Player,
@@ -64,16 +67,10 @@ async def test_transit_judgement_to_finished(
     punchline_deck: Deck[PunchlineCard],
     setup_deck: Deck[SetupCard],
 ) -> None:
-    setup_card = setup_deck.get_card()
-    lobby.add_player(egor)
-    lobby.add_player(anton)
-    lobby.settings.winning_score = 1
-    lobby.settings.finish_delay = 0
-    lobby.transit_to(Judgement(setup_card))
-    punchline_card = punchline_deck.get_card()
-    lobby.table.append(CardOnTable(punchline_card, anton))
-    lobby.state.open_punchline_card(egor, lobby.get_card_from_table(punchline_card))
-    lobby.state.pick_turn_winner(egor, punchline_card)
+    lobby.state.make_turn(anton, anton.hand[0])
+    card_on_table = lobby.table[0]
+    lobby.state.open_punchline_card(egor, card_on_table)
+    lobby.state.pick_turn_winner(egor, card_on_table.card)
     await asyncio.sleep(0.01)
     assert isinstance(lobby.state, Finished)
 
