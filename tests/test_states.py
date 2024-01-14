@@ -6,6 +6,7 @@ from lobby import (
     Finished,
     Judgement,
     Lobby,
+    LobbySettings,
     Player,
     PunchlineCard,
     SetupCard,
@@ -13,8 +14,14 @@ from lobby import (
 )
 
 
-async def test_transit_gathering_to_turns(lobby: Lobby) -> None:
-    lobby.state.start_turn()
+async def test_start_game_transit_to_turns(
+    lobby: Lobby,
+    egor: Player,
+    lobby_settings: LobbySettings,
+    setup_deck: Deck[SetupCard],
+    punchline_deck: Deck[PunchlineCard],
+) -> None:
+    lobby.state.start_game(egor, lobby_settings, setup_deck, punchline_deck)
     isinstance(lobby.state, Turns)
 
 

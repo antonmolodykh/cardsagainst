@@ -206,7 +206,7 @@ class State:
 
     def start_turn(self):
         raise Exception(
-            f"method `pick_turn_winner` not expected in state {type(self).__name__}"
+            f"method `start_turn` not expected in state {type(self).__name__}"
         )
 
     def pick_turn_winner(self, player: Player, card: PunchlineCard):
@@ -240,19 +240,7 @@ class Gathering(State):
                 pl.add_punchline_card(self.lobby.punchlines.get_card())
             pl.observer.game_started(pl)
 
-        self.start_turn()
-
-    def start_turn(self):
-        new_setup = self.lobby.setups.get_card()
-        self.lobby.turn_count += 1
-        self.lobby.transit_to(Turns(new_setup, self.lobby.settings.turn_duration))
-        for pl in self.lobby.all_players:
-            pl.observer.turn_started(
-                setup=new_setup,
-                turn_duration=self.lobby.settings.turn_duration,
-                lead=self.lobby.lead,
-                turn_count=self.lobby.turn_count,
-            )
+        self.lobby.start_turn()
 
 
 class Turns(State):
@@ -372,31 +360,11 @@ class Judgement(State):
         asyncio.create_task(start_turn())
 
     def start_turn(self):
-        previous_lead = self.lobby.lead
+        # TODO: Move to common start turn
         self.lobby.change_lead()
         self.lobby.setups.dump([self.setup])
 
-        new_setup = self.lobby.setups.get_card()
-        self.lobby.turn_count += 1
-        turn_duration = self.lobby.settings.turn_duration
-        self.lobby.transit_to(Turns(new_setup, turn_duration))
-        for pl in self.lobby.all_players_except(previous_lead):
-            new_card = self.lobby.punchlines.get_card()
-            pl.add_punchline_card(new_card)
-            pl.is_ready = False
-            pl.observer.turn_started(
-                setup=new_setup,
-                turn_duration=turn_duration,
-                lead=self.lobby.lead,
-                card=new_card,
-                turn_count=self.lobby.turn_count,
-            )
-        previous_lead.observer.turn_started(
-            setup=new_setup,
-            turn_duration=turn_duration,
-            lead=self.lobby.lead,
-            turn_count=self.lobby.turn_count,
-        )
+        self.lobby.start_turn()
 
     def finish_game(self, winner: Player):
         for pl in self.lobby.all_players:
@@ -411,31 +379,10 @@ class Finished(State):
         self.winner = winner
 
     def start_turn(self):
-        previous_lead = self.lobby.lead
         self.lobby.change_lead()
         self.lobby.setups.dump([self.setup])
 
-        new_setup = self.lobby.setups.get_card()
-        self.lobby.turn_count += 1
-        turn_duration = self.lobby.settings.turn_duration
-        self.lobby.transit_to(Turns(new_setup, turn_duration))
-        for pl in self.lobby.all_players_except(previous_lead):
-            new_card = self.lobby.punchlines.get_card()
-            pl.add_punchline_card(new_card)
-            pl.is_ready = False
-            pl.observer.turn_started(
-                setup=new_setup,
-                turn_duration=turn_duration,
-                lead=self.lobby.lead,
-                card=new_card,
-                turn_count=self.lobby.turn_count,
-            )
-        previous_lead.observer.turn_started(
-            setup=new_setup,
-            turn_duration=turn_duration,
-            lead=self.lobby.lead,
-            turn_count=self.lobby.turn_count,
-        )
+        self.lobby.start_turn()
 
     def continue_game(self, player: Player) -> None:
         if player is not self.lobby.owner:
@@ -529,6 +476,31 @@ class Lobby:
         # TODO: можем на дисконектнутого смениться?
         self.players.append(self.lead)
         self.lead = self.players.pop(0)
+
+    def start_turn(self):
+        new_setup = self.setups.get_card()
+        self.turn_count += 1
+        self.transit_to(Turns(new_setup, self.settings.turn_duration))
+
+        for pl in self.all_players:
+            pl.is_ready = False
+            if len(pl.hand) != self.HAND_SIZE:
+                new_card = self.punchlines.get_card()
+                pl.add_punchline_card(new_card)
+                pl.observer.turn_started(
+                    setup=new_setup,
+                    turn_duration=self.settings.turn_duration,
+                    lead=self.lead,
+                    card=new_card,
+                    turn_count=self.turn_count,
+                )
+            else:
+                pl.observer.turn_started(
+                    setup=new_setup,
+                    turn_duration=self.settings.turn_duration,
+                    lead=self.lead,
+                    turn_count=self.turn_count,
+                )
 
     def get_card_from_table(self, card) -> CardOnTable:
         for card_on_table in self.table:
