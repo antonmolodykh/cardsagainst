@@ -383,7 +383,7 @@ async def test_start_game_after_finish(
         call.turn_started(
             setup=lobby.state.setup,
             turn_duration=10,
-            lead=egor,
+            lead=yura,
             turn_count=1,
         ),
     ]
@@ -393,7 +393,7 @@ async def test_start_game_after_finish(
         call.turn_started(
             setup=lobby.state.setup,
             turn_duration=10,
-            lead=egor,
+            lead=yura,
             turn_count=1,
         ),
     ]
@@ -415,3 +415,19 @@ def test_player_not_ready_disconnected_transit_to_judgement(
     lobby.state.make_turn(yura, yura.hand[0])
     lobby.remove_player(anton)
     assert isinstance(lobby.state, Judgement)
+
+
+@pytest.mark.xfail(reason="Не понятно, что делать если все игроки удалились")
+@pytest.mark.usefixtures("egor_connected", "yura_connected", "game_started")
+async def test_start_game_transit_to_turns(
+    lobby: Lobby,
+    egor: Player,
+    yura: Player,
+    lobby_settings: LobbySettings,
+    setup_deck: Deck[SetupCard],
+    punchline_deck: Deck[PunchlineCard],
+) -> None:
+    lobby.remove_player(egor)
+    lobby.remove_player(yura)
+    # FIXME: Что делать, если из лобби удалились все игроки?
+    #   Сейчас мы пытаемся идти голосовать

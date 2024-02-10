@@ -206,7 +206,7 @@ class State:
 
     def start_turn(self):
         raise Exception(
-            f"method `pick_turn_winner` not expected in state {type(self).__name__}"
+            f"method `start_turn` not expected in state {type(self).__name__}"
         )
 
     def pick_turn_winner(self, player: Player, card: PunchlineCard):
@@ -217,6 +217,11 @@ class State:
     def continue_game(self, player: Player) -> None:
         raise Exception(
             f"method `continue_game` not expected in state {type(self).__name__}"
+        )
+
+    def end_turn(self):
+        raise Exception(
+            f"method `end_turn` not expected in state {type(self).__name__}"
         )
 
 
@@ -240,38 +245,13 @@ class Gathering(State):
                 pl.add_punchline_card(self.lobby.punchlines.get_card())
             pl.observer.game_started(pl)
 
-        self.start_turn()
-
-    def start_turn(self):
-        new_setup = self.lobby.setups.get_card()
-        self.lobby.turn_count += 1
-        self.lobby.transit_to(Turns(new_setup, self.lobby.settings.turn_duration))
-        for pl in self.lobby.all_players:
-            pl.observer.turn_started(
-                setup=new_setup,
-                turn_duration=self.lobby.settings.turn_duration,
-                lead=self.lobby.lead,
-                turn_count=self.lobby.turn_count,
-            )
+        self.lobby.start_turn()
 
 
 class Turns(State):
-    timer: Task | None = None
-
-    def __init__(self, setup: SetupCard, turn_duration: int | None):
+    def __init__(self, setup: SetupCard, timer: Task):
         self.setup = setup
-        if turn_duration is not None:
-            self.timer = asyncio.create_task(self.set_timer(turn_duration))
-
-    async def set_timer(self, turn_duration: int) -> None:
-        await asyncio.sleep(turn_duration)
-        for player in self.lobby.players:
-            if not player.is_connected:
-                continue
-            if not player.is_ready:
-                self.choose_punchline_card(player, random.choice(player.hand))
-
-        self.end_turn()
+        self.timer = timer
 
     def handle_player_removal(self):
         self.try_end_turn()
@@ -285,11 +265,14 @@ class Turns(State):
             if pl.is_connected and not pl.is_ready:
                 return
 
-        if self.timer:
-            self.timer.cancel()
+        self.timer.cancel()
         self.end_turn()
 
     def end_turn(self):
+        for player in self.lobby.players:
+            if player.is_connected and not player.is_ready:
+                self.choose_punchline_card(player, random.choice(player.hand))
+
         random.shuffle(self.lobby.table)
         for pl in self.lobby.all_players:
             pl.observer.all_players_ready()
@@ -372,31 +355,8 @@ class Judgement(State):
         asyncio.create_task(start_turn())
 
     def start_turn(self):
-        previous_lead = self.lobby.lead
-        self.lobby.change_lead()
         self.lobby.setups.dump([self.setup])
-
-        new_setup = self.lobby.setups.get_card()
-        self.lobby.turn_count += 1
-        turn_duration = self.lobby.settings.turn_duration
-        self.lobby.transit_to(Turns(new_setup, turn_duration))
-        for pl in self.lobby.all_players_except(previous_lead):
-            new_card = self.lobby.punchlines.get_card()
-            pl.add_punchline_card(new_card)
-            pl.is_ready = False
-            pl.observer.turn_started(
-                setup=new_setup,
-                turn_duration=turn_duration,
-                lead=self.lobby.lead,
-                card=new_card,
-                turn_count=self.lobby.turn_count,
-            )
-        previous_lead.observer.turn_started(
-            setup=new_setup,
-            turn_duration=turn_duration,
-            lead=self.lobby.lead,
-            turn_count=self.lobby.turn_count,
-        )
+        self.lobby.start_turn()
 
     def finish_game(self, winner: Player):
         for pl in self.lobby.all_players:
@@ -411,31 +371,8 @@ class Finished(State):
         self.winner = winner
 
     def start_turn(self):
-        previous_lead = self.lobby.lead
-        self.lobby.change_lead()
         self.lobby.setups.dump([self.setup])
-
-        new_setup = self.lobby.setups.get_card()
-        self.lobby.turn_count += 1
-        turn_duration = self.lobby.settings.turn_duration
-        self.lobby.transit_to(Turns(new_setup, turn_duration))
-        for pl in self.lobby.all_players_except(previous_lead):
-            new_card = self.lobby.punchlines.get_card()
-            pl.add_punchline_card(new_card)
-            pl.is_ready = False
-            pl.observer.turn_started(
-                setup=new_setup,
-                turn_duration=turn_duration,
-                lead=self.lobby.lead,
-                card=new_card,
-                turn_count=self.lobby.turn_count,
-            )
-        previous_lead.observer.turn_started(
-            setup=new_setup,
-            turn_duration=turn_duration,
-            lead=self.lobby.lead,
-            turn_count=self.lobby.turn_count,
-        )
+        self.lobby.start_turn()
 
     def continue_game(self, player: Player) -> None:
         if player is not self.lobby.owner:
@@ -527,8 +464,43 @@ class Lobby:
 
     def change_lead(self) -> None:
         # TODO: можем на дисконектнутого смениться?
-        self.players.append(self.lead)
+        # TODO: Выбирать, нужен ли лид по режиму игры
+        if self.lead:
+            self.players.append(self.lead)
+        # TODO: Что делать в ситуации, когда не осталось игроков?
         self.lead = self.players.pop(0)
+
+    def start_turn(self):
+        self.change_lead()
+        new_setup = self.setups.get_card()
+        self.turn_count += 1
+
+        async def turn_timer() -> None:
+            if turn_duration := self.settings.turn_duration:
+                await asyncio.sleep(turn_duration)
+                self.state.end_turn()
+
+        self.transit_to(Turns(new_setup, asyncio.create_task(turn_timer())))
+
+        for pl in self.all_players:
+            pl.is_ready = False
+            if len(pl.hand) != self.HAND_SIZE:
+                new_card = self.punchlines.get_card()
+                pl.add_punchline_card(new_card)
+                pl.observer.turn_started(
+                    setup=new_setup,
+                    turn_duration=self.settings.turn_duration,
+                    lead=self.lead,
+                    card=new_card,
+                    turn_count=self.turn_count,
+                )
+            else:
+                pl.observer.turn_started(
+                    setup=new_setup,
+                    turn_duration=self.settings.turn_duration,
+                    lead=self.lead,
+                    turn_count=self.turn_count,
+                )
 
     def get_card_from_table(self, card) -> CardOnTable:
         for card_on_table in self.table:
@@ -562,10 +534,7 @@ class Lobby:
         if not isinstance(self.state, Gathering):
             raise GameAlreadyStartedError
 
-        if not self.lead:
-            self.lead = player
-        else:
-            self.players.append(player)
+        self.players.append(player)
 
         for pl in self.all_players:
             pl.observer.player_joined(player)
