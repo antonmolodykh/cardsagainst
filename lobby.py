@@ -401,27 +401,13 @@ class Finished(State):
         self.lobby.state.start_game(player, lobby_settings, setups, punchlines)
 
 
-class Grave:
-    data: dict[str, Player]
-
-    def __init__(self, lobby: Lobby):
-        self.lobby = lobby
-
-    def bury(self, player: Player):
-        self.data[player.token] = player
-
-    def resurrect(self, player_token: str):
-        player = self.data[player_token]
-        self.lobby.add_player(self)
-
-
 class Lobby:
     uid: uuid4
     players: list[Player]
     lead: Player | None
     owner: Player
     table: list[CardOnTable]
-    grave: set
+    grave: set[Player]
     punchlines: Deck[PunchlineCard]
     setups: Deck[SetupCard]
     observer: LobbyObserver
