@@ -503,25 +503,14 @@ class Lobby:
 
     def set_connected(self, player: Player):
         player.set_connected()
-        if not self.owner:
-            self.owner = player
         for pl in self.all_players_except(player):
             pl.observer.player_connected(player)
 
     def set_disconnected(self, player: Player):
-        was_owner = False
-
         player.set_disconnected()
-        if player is self.owner:
-            was_owner = True
-            self.change_owner()
 
         for pl in self.all_players_except(player):
             pl.observer.player_disconnected(player)
-            if was_owner:
-                # Если отключившийся был owner'ом
-                pl.observer.owner_changed(player)
-        # обработать если осталось менее 2 игроков
 
     def add_player(self, player: Player):
         if not isinstance(self.state, Gathering):
@@ -538,6 +527,11 @@ class Lobby:
             # TODO: Обрабатывать переход на голосование / смену лида
         if player in self.players:
             self.players.remove(player)
+
+        if player is self.owner:
+            self.change_owner()
+            for pl in self.all_players_except(player):
+                pl.observer.owner_changed(player)
 
         self.punchlines.dump(player.hand)
         for card_on_table in self.table:
