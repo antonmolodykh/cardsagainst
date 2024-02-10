@@ -444,8 +444,23 @@ async def test_owner_set_on_creation(
 ) -> None:
     with pytest.raises(PlayerNotOwnerError):
         lobby.state.start_game(
-            egor,
+            yura,
             lobby_settings,
             setup_deck,
             punchline_deck,
         )
+
+
+@pytest.mark.usefixtures("egor_connected", "yura_connected", "game_started")
+async def test_owner_removed(
+    lobby: Lobby,
+    egor: Player,
+    yura: Player,
+    setup_deck: Deck[SetupCard],
+    punchline_deck: Deck[PunchlineCard],
+    lobby_settings: LobbySettings,
+) -> None:
+    lobby.set_disconnected(egor)
+    assert lobby.owner is egor
+    lobby.remove_player(egor)
+    assert lobby.owner is yura
