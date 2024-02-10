@@ -421,7 +421,6 @@ async def connect(
         profile=Profile(
             name=connect_request.name,
             emoji=connect_request.emoji,
-            background_color=connect_request.background_color,
         ),
     )
     try:

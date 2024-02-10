@@ -97,18 +97,16 @@ def lobby(  # TODO: Переименовать в лобби егора, что�
     state_gathering: Gathering,
     lobby_settings: LobbySettings,
 ) -> Lobby:
-    lobby = Lobby(
+    return Lobby(
         settings=lobby_settings,
         players=[],
+        owner=egor,
         state=state_gathering,
         # TODO: state gathering determines the setups and punchlines
         # Move?
         setups=setup_deck,
         punchlines=punchline_deck,
     )
-    # TODO: Почему лобби создается без owner?
-    lobby.owner = egor
-    return lobby
 
 
 @pytest.fixture

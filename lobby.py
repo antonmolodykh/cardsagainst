@@ -17,7 +17,7 @@ class CardNotInPlayerHandError(Exception):
     pass
 
 
-class PlayerNotDealerError(Exception):
+class PlayerNotLeadError(Exception):
     pass
 
 
@@ -31,13 +31,6 @@ class GameAlreadyStartedError(Exception):
 
 class NotAllCardsOpenedError(Exception):
     pass
-
-
-# class State(Enum):
-#     MOVE = "move"
-#     JUDGING = "judging"
-#     PENDING_START = "pending start"
-#     FINISHED = "finished"
 
 
 class LobbyObserver:
@@ -105,7 +98,6 @@ class PunchlineCard:
 class Profile(BaseModel):
     name: str
     emoji: str
-    background_color: str  # TODO: remove
 
 
 class Player:
@@ -311,7 +303,7 @@ class Judgement(State):
 
     def open_punchline_card(self, player: Player, card_on_table: CardOnTable) -> None:
         if self.lobby.lead is not player:
-            raise PlayerNotDealerError
+            raise PlayerNotLeadError
 
         card_on_table.is_open = True
         for pl in self.lobby.all_players:
@@ -319,7 +311,7 @@ class Judgement(State):
 
     def pick_turn_winner(self, player, card) -> None:
         if player is not self.lobby.lead:
-            raise PlayerNotDealerError
+            raise PlayerNotLeadError
 
         for card_on_table in self.lobby.table:
             if not card_on_table.is_open:
@@ -418,13 +410,14 @@ class Lobby:
         self,
         settings: LobbySettings,
         players: Collection[Player],
+        owner: Player,
         setups: Deck[SetupCard],
         punchlines: Deck[PunchlineCard],
         state: Gathering,
     ) -> None:
         self.players = list(players)
         self.lead = None
-        self.owner = None
+        self.owner = owner
         self.table = []
         self.uid = uuid4()
         self.punchlines = punchlines
