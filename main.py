@@ -29,7 +29,8 @@ from lobby import (
     PunchlineCard,
     SetupCard,
     Turns,
-    GameAlreadyStartedError, UnknownPlayerError,
+    GameAlreadyStartedError,
+    UnknownPlayerError,
 )
 
 observers: list[LobbyObserver] = []

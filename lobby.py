@@ -7,8 +7,7 @@ from dataclasses import dataclass
 from typing import Collection, Generic, TypeVar
 from uuid import uuid4
 
-from pydantic import BaseModel, Field
-from typing_extensions import Annotated
+from pydantic import BaseModel
 
 lobbies = {}
 
@@ -35,7 +34,6 @@ class NotAllCardsOpenedError(Exception):
 
 class UnknownPlayerError(Exception):
     pass
-
 
 
 class LobbyObserver:
