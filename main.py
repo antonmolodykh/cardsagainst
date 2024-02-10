@@ -29,7 +29,7 @@ from lobby import (
     PunchlineCard,
     SetupCard,
     Turns,
-    GameAlreadyStartedError,
+    GameAlreadyStartedError, UnknownPlayerError,
 )
 
 observers: list[LobbyObserver] = []
@@ -401,7 +401,21 @@ async def connect(
             lobby = lobbies[lobby_token]
         except KeyError:
             raise HTTPException(status_code=404)
+        player = Player(
+            profile=Profile(
+                name=connect_request.name,
+                emoji=connect_request.emoji,
+            ),
+            token=uuid4().hex[:8],
+        )
     else:
+        player = Player(
+            profile=Profile(
+                name=connect_request.name,
+                emoji=connect_request.emoji,
+            ),
+            token=uuid4().hex[:8],
+        )
         setups = await cards_dao.get_setups(deck_id="one")
         punchlines = await cards_dao.get_punchlines(deck_id="one")
         lobby = Lobby(
@@ -409,6 +423,7 @@ async def connect(
                 winning_score=config.winning_score,
             ),
             players=[],
+            owner=player,
             setups=setups,
             punchlines=punchlines,
             state=Gathering(),
@@ -417,23 +432,14 @@ async def connect(
         lobbies[lobby_token] = lobby
         print(f"Lobby created. lobbies={lobbies}")
 
-    player = Player(
-        profile=Profile(
-            name=connect_request.name,
-            emoji=connect_request.emoji,
-        ),
-    )
     try:
         lobby.add_player(player)
     except GameAlreadyStartedError:
         raise HTTPException(status_code=403)
 
-    player_token = uuid4().hex[:8]
-    players[player_token] = player
-
     return ConnectResponse(
         host=config.ws_url,
-        player_token=player_token,
+        player_token=player.token,
         lobby_token=lobby_token,
     )
 
@@ -455,16 +461,11 @@ async def websocket_endpoint(
         await websocket.close()
         return
 
-    try:
-        player = players[player_token]
-    except KeyError:
-        await websocket.send_json(
-            {"type": "error", "data": {"status": 404, "message": "Player not found"}}
-        )
-        await websocket.close()
-        return
+    observer = RemotePlayer(websocket=websocket, lobby=lobby, player=player)
 
-    if player not in lobby.all_players:
+    try:
+        player = lobby.connect(player_token)
+    except UnknownPlayerError:
         await websocket.send_json(
             {"type": "error", "data": {"status": 404, "message": "Player not found"}}
         )
@@ -475,17 +476,16 @@ async def websocket_endpoint(
         remove_player_tasks[player_token].cancel()
         del remove_player_tasks[player_token]
 
-    observer = RemotePlayer(websocket=websocket, lobby=lobby, player=player)
     send_messages_task = asyncio.create_task(observer.send_messages())
     player.observer = observer
 
-    lobby.set_connected(player)
+    lobby.connect(player)
 
     async def run_remove_player():
         print(f"Player removal scheduled, player_token={player_token}")
         await asyncio.sleep(config.player_removal_delay)
         lobby.remove_player(player)
-        del players[player_token]
+        lobby.remove_player(player)
         if not lobby.all_players:
             del lobbies[lobby_token]
             print(f"Lobby deleted. lobbies={lobbies}")

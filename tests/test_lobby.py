@@ -189,7 +189,7 @@ def test_player_connected(lobby: Lobby, yura: Player, observer: Mock) -> None:
     player_mock = Mock(LobbyObserver)
     observer.attach_mock(player_mock, "yura")
     yura.observer = player_mock
-    lobby.set_connected(yura)
+    lobby.connect(yura)
 
     expected_events = [
         call.egor.player_connected(yura),

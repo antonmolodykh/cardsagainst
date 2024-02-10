@@ -121,7 +121,7 @@ def egor_connected(
     player_mock = Mock(LobbyObserver)
     observer.attach_mock(player_mock, "egor")
     egor.observer = player_mock
-    lobby.set_connected(egor)
+    lobby.connect(egor)
 
 
 @pytest.fixture
@@ -136,7 +136,7 @@ def anton_connected(
     player_mock = Mock(LobbyObserver)
     observer.attach_mock(player_mock, "anton")
     anton.observer = player_mock
-    lobby.set_connected(anton)
+    lobby.connect(anton)
 
 
 @pytest.fixture
@@ -151,7 +151,7 @@ def yura_connected(
     player_mock = Mock(LobbyObserver)
     observer.attach_mock(player_mock, "yura")
     yura.observer = player_mock
-    lobby.set_connected(yura)
+    lobby.connect(yura)
 
 
 @pytest.fixture

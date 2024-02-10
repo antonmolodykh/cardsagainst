@@ -33,6 +33,11 @@ class NotAllCardsOpenedError(Exception):
     pass
 
 
+class UnknownPlayerError(Exception):
+    pass
+
+
+
 class LobbyObserver:
     def owner_changed(self, player: Player):
         pass
@@ -102,15 +107,18 @@ class Profile(BaseModel):
 
 class Player:
     observer: LobbyObserver
+    lobby: Lobby
     uuid: str
     hand: list[PunchlineCard]
     score: int = 0
     profile: Profile
+    token: str
     is_ready = False
     is_connected: bool = False
 
-    def __init__(self, profile: Profile) -> None:
+    def __init__(self, profile: Profile, token: str) -> None:
         self.profile = profile
+        self.token = token
         self.hand = []
         self.uuid = uuid4().hex
         self.observer = LobbyObserver()
@@ -391,12 +399,27 @@ class Finished(State):
         self.lobby.state.start_game(player, lobby_settings, setups, punchlines)
 
 
+class Grave:
+    data: dict[str, Player]
+
+    def __init__(self, lobby: Lobby):
+        self.lobby = lobby
+
+    def bury(self, player: Player):
+        self.data[player.token] = player
+
+    def resurrect(self, player_token: str):
+        player = self.data[player_token]
+        self.lobby.add_player(self)
+
+
 class Lobby:
     uid: uuid4
     players: list[Player]
     lead: Player | None
-    owner: Player | None
+    owner: Player
     table: list[CardOnTable]
+    grave: set
     punchlines: Deck[PunchlineCard]
     setups: Deck[SetupCard]
     observer: LobbyObserver
@@ -419,6 +442,7 @@ class Lobby:
         self.lead = None
         self.owner = owner
         self.table = []
+        self.grave = set()
         self.uid = uuid4()
         self.punchlines = punchlines
         self.setups = setups
@@ -501,10 +525,24 @@ class Lobby:
                 return card_on_table
         raise NotImplemented
 
-    def set_connected(self, player: Player):
+    def connect(self, player_token: str) -> Player:
+        for player in self.all_players:
+            if player_token == player.token:
+                break
+        else:
+            for player in self.grave:
+                if player_token == player.token:
+                    self.grave.remove(player)
+                    self.players.append(player)
+                    break
+            else:
+                raise UnknownPlayerError()
+
         player.set_connected()
         for pl in self.all_players_except(player):
             pl.observer.player_connected(player)
+
+        return player
 
     def set_disconnected(self, player: Player):
         player.set_disconnected()
@@ -532,6 +570,8 @@ class Lobby:
             self.change_owner()
             for pl in self.all_players_except(player):
                 pl.observer.owner_changed(self.owner)
+
+        self.grave.add(player)
 
         self.punchlines.dump(player.hand)
         for card_on_table in self.table:
