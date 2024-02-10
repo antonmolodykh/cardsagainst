@@ -542,6 +542,7 @@ class Lobby:
     def remove_player(self, player: Player):
         if player is self.lead:
             self.lead = None
+            # TODO: Обрабатывать переход на голосование / смену лида
         if player in self.players:
             self.players.remove(player)
 
