@@ -456,9 +456,6 @@ async def test_owner_removed(
     lobby: Lobby,
     egor: Player,
     yura: Player,
-    setup_deck: Deck[SetupCard],
-    punchline_deck: Deck[PunchlineCard],
-    lobby_settings: LobbySettings,
     observer: Mock,
 ) -> None:
     lobby.set_disconnected(egor)
@@ -469,3 +466,10 @@ async def test_owner_removed(
         call.yura.owner_changed(yura),
     ]
     observer.assert_has_calls(expected_events)
+
+
+@pytest.mark.usefixtures("egor_connected")
+async def test_bury_removed_player(lobby: Lobby, egor: Player) -> None:
+    lobby.set_disconnected(egor)
+    lobby.remove_player(egor)
+    assert egor in lobby.grave
