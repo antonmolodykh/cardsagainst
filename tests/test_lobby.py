@@ -465,3 +465,22 @@ async def test_owner_removed(
         call.yura.owner_changed(yura),
     ]
     observer.assert_has_calls(expected_events)
+
+
+@pytest.mark.usefixtures("yura_connected", "egor_connected", "game_started")
+async def test_resurrect(
+    lobby: Lobby, egor: Player, yura: Player, observer: Mock
+) -> None:
+    lobby.disconnect(yura)
+    assert yura in lobby.all_players
+    lobby.remove_player(yura)
+    assert yura not in lobby.all_players
+    assert yura in lobby.grave
+
+    lobby.connect(yura.token, observer.yura)
+
+    expected_events = [
+        call.yura.welcome(),
+        call.egor.player_connected(yura),
+    ]
+    observer.assert_has_calls(expected_events, any_order=True)

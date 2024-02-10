@@ -4,7 +4,7 @@ import asyncio
 import random
 from asyncio import Task
 from dataclasses import dataclass
-from typing import Collection, Generic, TypeVar
+from typing import Generic, TypeVar
 from uuid import uuid4
 
 from pydantic import BaseModel
@@ -187,9 +187,7 @@ class State:
     lobby: Lobby
 
     def handle_player_removal(self):
-        raise Exception(
-            f"method `handle_player_removal` not expected in state {type(self).__name__}"
-        )
+        pass
 
     def make_turn(self, player: Player, card: PunchlineCard) -> None:
         raise Exception(
@@ -520,7 +518,12 @@ class Lobby:
             for player in self.grave:
                 if player_token == player.token:
                     self.grave.remove(player)
+
+                    # TODO: Можно использовать lobby.add_player, если
+                    #   разрешим присоединяться во время игры
                     self.players.append(player)
+                    for pl in self.all_players:
+                        pl.observer.player_joined(player)
                     break
             else:
                 raise UnknownPlayerError()
@@ -561,10 +564,14 @@ class Lobby:
 
         self.grave.add(player)
 
+        # TODO: Кажется, не надо сбрасывать руку, если игрока похоронили
+        #   Мы можем воскресить его с теми же картами, если не началась новая игра
         self.punchlines.dump(player.hand)
         for card_on_table in self.table:
             if card_on_table.player is player:
                 self.punchlines.dump([card_on_table.card])
+                # TODO: Если сбросить карту игрока, то надо как-то оповестить
+                #   остальных, что эту карту надо убрать со стола
                 self.table.remove(card_on_table)
                 print(f"Card is dumped and removed from the table. table={self.table}")
                 break
