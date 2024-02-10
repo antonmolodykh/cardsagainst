@@ -459,6 +459,7 @@ async def test_owner_removed(
     setup_deck: Deck[SetupCard],
     punchline_deck: Deck[PunchlineCard],
     lobby_settings: LobbySettings,
+    observer: Mock,
 ) -> None:
     lobby.set_disconnected(egor)
     assert lobby.owner is egor
