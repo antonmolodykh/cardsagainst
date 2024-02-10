@@ -37,6 +37,8 @@ class UnknownPlayerError(Exception):
 
 
 class LobbyObserver:
+    player: Player
+
     def owner_changed(self, player: Player):
         pass
 
@@ -121,11 +123,13 @@ class Player:
         self.uuid = uuid4().hex
         self.observer = LobbyObserver()
 
-    def set_connected(self) -> None:
+    def connect(self, observer: LobbyObserver) -> None:
         self.is_connected = True
-        self.observer.welcome()
+        self.observer = observer
+        observer.player = self
+        observer.welcome()
 
-    def set_disconnected(self) -> None:
+    def disconnect(self) -> None:
         self.observer = LobbyObserver()
         self.is_connected = False
 
@@ -430,13 +434,12 @@ class Lobby:
     def __init__(
         self,
         settings: LobbySettings,
-        players: Collection[Player],
         owner: Player,
         setups: Deck[SetupCard],
         punchlines: Deck[PunchlineCard],
         state: Gathering,
     ) -> None:
-        self.players = list(players)
+        self.players = []
         self.lead = None
         self.owner = owner
         self.table = []
@@ -523,7 +526,7 @@ class Lobby:
                 return card_on_table
         raise NotImplemented
 
-    def connect(self, player_token: str) -> Player:
+    def connect(self, player_token: str, observer: LobbyObserver) -> Player:
         for player in self.all_players:
             if player_token == player.token:
                 break
@@ -536,14 +539,15 @@ class Lobby:
             else:
                 raise UnknownPlayerError()
 
-        player.set_connected()
+        player.connect(observer)
+
         for pl in self.all_players_except(player):
             pl.observer.player_connected(player)
 
         return player
 
-    def set_disconnected(self, player: Player):
-        player.set_disconnected()
+    def disconnect(self, player: Player):
+        player.disconnect()
 
         for pl in self.all_players_except(player):
             pl.observer.player_disconnected(player)

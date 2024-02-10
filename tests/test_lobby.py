@@ -185,11 +185,10 @@ def test_player_joined(lobby: Lobby, yura: Player, observer: Mock) -> None:
 
 
 @pytest.mark.usefixtures("egor_connected", "yura_joined")
-def test_player_connected(lobby: Lobby, yura: Player, observer: Mock) -> None:
+def test_connect_player(lobby: Lobby, yura: Player, observer: Mock) -> None:
     player_mock = Mock(LobbyObserver)
     observer.attach_mock(player_mock, "yura")
-    yura.observer = player_mock
-    lobby.connect(yura.token)
+    lobby.connect(yura.token, player_mock)
 
     expected_events = [
         call.egor.player_connected(yura),
@@ -199,8 +198,8 @@ def test_player_connected(lobby: Lobby, yura: Player, observer: Mock) -> None:
 
 
 @pytest.mark.usefixtures("egor_connected", "yura_connected")
-def test_player_disconnected(lobby: Lobby, yura: Player, observer: Mock) -> None:
-    lobby.set_disconnected(yura)
+def test_disconnect_player(lobby: Lobby, yura: Player, observer: Mock) -> None:
+    lobby.disconnect(yura)
 
     expected_events = [
         call.egor.player_disconnected(yura),
@@ -458,7 +457,7 @@ async def test_owner_removed(
     yura: Player,
     observer: Mock,
 ) -> None:
-    lobby.set_disconnected(egor)
+    lobby.disconnect(egor)
     assert lobby.owner is egor
     lobby.remove_player(egor)
     assert lobby.owner is yura
@@ -466,6 +465,3 @@ async def test_owner_removed(
         call.yura.owner_changed(yura),
     ]
     observer.assert_has_calls(expected_events)
-
-
-# TODO: Тестировать коннектор

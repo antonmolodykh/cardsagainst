@@ -93,7 +93,6 @@ def lobby(  # TODO: Переименовать в лобби егора, что�
 ) -> Lobby:
     return Lobby(
         settings=lobby_settings,
-        players=[],
         owner=egor,
         state=state_gathering,
         # TODO: state gathering determines the setups and punchlines
@@ -113,9 +112,8 @@ def egor_connected(
     egor_joined: None, lobby: Lobby, egor: Player, observer: Mock
 ) -> None:
     player_mock = Mock(LobbyObserver)
+    lobby.connect(egor.token, player_mock)
     observer.attach_mock(player_mock, "egor")
-    egor.observer = player_mock
-    lobby.connect(egor.token)
 
 
 @pytest.fixture
@@ -128,9 +126,8 @@ def anton_connected(
     anton_joined: None, lobby: Lobby, anton: Player, observer: Mock
 ) -> None:
     player_mock = Mock(LobbyObserver)
+    lobby.connect(anton.token, player_mock)
     observer.attach_mock(player_mock, "anton")
-    anton.observer = player_mock
-    lobby.connect(anton.token)
 
 
 @pytest.fixture
@@ -143,9 +140,8 @@ def yura_connected(
     yura_joined: None, lobby: Lobby, yura: Player, observer: Mock
 ) -> None:
     player_mock = Mock(LobbyObserver)
+    lobby.connect(yura.token, player_mock)
     observer.attach_mock(player_mock, "yura")
-    yura.observer = player_mock
-    lobby.connect(yura.token)
 
 
 @pytest.fixture
