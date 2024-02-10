@@ -444,7 +444,7 @@ class Lobby:
 
     def change_owner(self) -> None:
         self.owner = None
-        for player in self.players:
+        for player in self.all_players:
             if player.is_connected:
                 self.owner = player
                 return
@@ -531,7 +531,7 @@ class Lobby:
         if player is self.owner:
             self.change_owner()
             for pl in self.all_players_except(player):
-                pl.observer.owner_changed(player)
+                pl.observer.owner_changed(self.owner)
 
         self.punchlines.dump(player.hand)
         for card_on_table in self.table:
