@@ -431,3 +431,21 @@ async def test_start_game_transit_to_turns(
     lobby.remove_player(yura)
     # FIXME: Что делать, если из лобби удалились все игроки?
     #   Сейчас мы пытаемся идти голосовать
+
+
+@pytest.mark.usefixtures("yura_connected")
+async def test_owner_set_on_creation(
+    lobby: Lobby,
+    egor: Player,
+    yura: Player,
+    setup_deck: Deck[SetupCard],
+    punchline_deck: Deck[PunchlineCard],
+    lobby_settings: LobbySettings,
+) -> None:
+    with pytest.raises(PlayerNotOwnerError):
+        lobby.state.start_game(
+            egor,
+            lobby_settings,
+            setup_deck,
+            punchline_deck,
+        )
