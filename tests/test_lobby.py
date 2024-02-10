@@ -12,7 +12,7 @@ from lobby import (
     LobbySettings,
     NotAllCardsOpenedError,
     Player,
-    PlayerNotDealerError,
+    PlayerNotLeadError,
     PlayerNotOwnerError,
     PunchlineCard,
     SetupCard,
@@ -96,7 +96,7 @@ def test_open_punchline_card_member_not_lead(
     lobby.state.make_turn(anton, punchline_card)
 
     # TODO: Use `Lead` instead of `Dealer`
-    with pytest.raises(PlayerNotDealerError):
+    with pytest.raises(PlayerNotLeadError):
         assert isinstance(lobby.state, Judgement)
         lobby.state.open_punchline_card(
             anton, lobby.get_card_from_table(punchline_card)
