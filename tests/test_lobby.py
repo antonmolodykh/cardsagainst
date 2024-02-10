@@ -451,7 +451,7 @@ async def test_owner_set_on_creation(
         )
 
 
-@pytest.mark.usefixtures("egor_connected", "yura_connected", "game_started")
+@pytest.mark.usefixtures("yura_connected", "egor_connected", "game_started")
 async def test_owner_removed(
     lobby: Lobby,
     egor: Player,
@@ -464,3 +464,7 @@ async def test_owner_removed(
     assert lobby.owner is egor
     lobby.remove_player(egor)
     assert lobby.owner is yura
+    expected_events = [
+        call.yura.owner_changed(yura),
+    ]
+    observer.assert_has_calls(expected_events)
