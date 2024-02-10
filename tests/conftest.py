@@ -89,7 +89,7 @@ def lobby_settings() -> LobbySettings:
 
 
 @pytest.fixture
-def lobby(
+def lobby(  # TODO: Переименовать в лобби егора, чтобы было понятно, что он owner
     egor: Player,
     setup_deck: Deck[SetupCard],
     punchline_deck: Deck[PunchlineCard],
