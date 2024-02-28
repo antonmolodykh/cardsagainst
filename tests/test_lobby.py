@@ -481,6 +481,7 @@ async def test_resurrect(
 
     expected_events = [
         call.yura.welcome(),
+        call.egor.player_joined(yura),
         call.egor.player_connected(yura),
     ]
     observer.assert_has_calls(expected_events, any_order=True)
