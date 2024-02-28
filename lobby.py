@@ -37,8 +37,6 @@ class UnknownPlayerError(Exception):
 
 
 class LobbyObserver:
-    player: Player
-
     def owner_changed(self, player: Player):
         pass
 
@@ -126,7 +124,6 @@ class Player:
     def connect(self, observer: LobbyObserver) -> None:
         self.is_connected = True
         self.observer = observer
-        observer.player = self
         observer.welcome()
 
     def disconnect(self) -> None:
@@ -510,32 +507,25 @@ class Lobby:
                 return card_on_table
         raise NotImplemented
 
-    def connect(self, player_token: str, observer: LobbyObserver) -> Player:
-        for player in self.all_players:
-            if player_token == player.token:
-                break
-        else:
-            for player in self.grave:
-                if player_token == player.token:
-                    self.grave.remove(player)
-
-                    # TODO: Можно использовать lobby.add_player, если
-                    #   разрешим присоединяться во время игры
-                    self.players.append(player)
-                    for pl in self.all_players:
-                        pl.observer.player_joined(player)
-                    break
-            else:
+    def connect(self, player: Player, observer: LobbyObserver) -> None:
+        if player not in self.all_players:
+            if player not in self.grave:
                 raise UnknownPlayerError()
+
+            self.grave.remove(player)
+
+            # TODO: Можно использовать lobby.add_player, если
+            #   разрешим присоединяться во время игры
+            self.players.append(player)
+            for pl in self.all_players:
+                pl.observer.player_joined(player)
 
         player.connect(observer)
 
         for pl in self.all_players_except(player):
             pl.observer.player_connected(player)
 
-        return player
-
-    def disconnect(self, player: Player):
+    def disconnect(self, player: Player) -> None:
         player.disconnect()
 
         for pl in self.all_players_except(player):

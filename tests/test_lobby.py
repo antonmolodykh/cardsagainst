@@ -188,7 +188,7 @@ def test_player_joined(lobby: Lobby, yura: Player, observer: Mock) -> None:
 def test_connect_player(lobby: Lobby, yura: Player, observer: Mock) -> None:
     player_mock = Mock(LobbyObserver)
     observer.attach_mock(player_mock, "yura")
-    lobby.connect(yura.token, player_mock)
+    lobby.connect(yura, player_mock)
 
     expected_events = [
         call.egor.player_connected(yura),
@@ -477,7 +477,7 @@ async def test_resurrect(
     assert yura not in lobby.all_players
     assert yura in lobby.grave
 
-    lobby.connect(yura.token, observer.yura)
+    lobby.connect(yura, observer.yura)
 
     expected_events = [
         call.yura.welcome(),

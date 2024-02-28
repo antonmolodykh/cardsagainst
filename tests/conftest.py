@@ -112,7 +112,7 @@ def egor_connected(
     egor_joined: None, lobby: Lobby, egor: Player, observer: Mock
 ) -> None:
     player_mock = Mock(LobbyObserver)
-    lobby.connect(egor.token, player_mock)
+    lobby.connect(egor, player_mock)
     observer.attach_mock(player_mock, "egor")
 
 
@@ -126,7 +126,7 @@ def anton_connected(
     anton_joined: None, lobby: Lobby, anton: Player, observer: Mock
 ) -> None:
     player_mock = Mock(LobbyObserver)
-    lobby.connect(anton.token, player_mock)
+    lobby.connect(anton, player_mock)
     observer.attach_mock(player_mock, "anton")
 
 
@@ -140,7 +140,7 @@ def yura_connected(
     yura_joined: None, lobby: Lobby, yura: Player, observer: Mock
 ) -> None:
     player_mock = Mock(LobbyObserver)
-    lobby.connect(yura.token, player_mock)
+    lobby.connect(yura, player_mock)
     observer.attach_mock(player_mock, "yura")
 
 

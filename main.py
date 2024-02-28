@@ -4,8 +4,9 @@ import asyncio
 import traceback
 from asyncio import Task
 from enum import StrEnum
-from typing import Generic, TypeVar
+from typing import Generic, MutableMapping, TypeVar
 from uuid import uuid4
+from weakref import WeakValueDictionary
 
 from fastapi import FastAPI, HTTPException, Query, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
@@ -19,6 +20,7 @@ from dao import CardsDAO
 from dependencies import CardsDAODependency, lifespan
 from lobby import (
     CardOnTable,
+    GameAlreadyStartedError,
     Gathering,
     Judgement,
     Lobby,
@@ -29,14 +31,12 @@ from lobby import (
     PunchlineCard,
     SetupCard,
     Turns,
-    GameAlreadyStartedError,
     UnknownPlayerError,
 )
 
 observers: list[LobbyObserver] = []
 
 app = FastAPI(lifespan=lifespan)
-
 
 app.add_middleware(
     CORSMiddleware,
@@ -46,7 +46,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-players: dict[str, Player] = {}
+player_by_token: MutableMapping[str, Player] = WeakValueDictionary()
 lobbies: dict[str, Lobby] = {}
 remove_player_tasks: dict[str, Task] = {}
 
@@ -130,9 +130,10 @@ class GameStartedData(ApiModel):
 
 
 class RemotePlayer(LobbyObserver):
-    def __init__(self, websocket: WebSocket, lobby: Lobby) -> None:
+    def __init__(self, websocket: WebSocket, lobby: Lobby, player: Player) -> None:
         self.lobby = lobby
         self.websocket = websocket
+        self.player = player
         self._queue = asyncio.Queue()
 
     def owner_changed(self, player: Player):
@@ -425,6 +426,10 @@ async def connect(
     except GameAlreadyStartedError:
         raise HTTPException(status_code=403)
 
+    player_by_token[player.token] = player
+    # TODO: Нужно запустить таску, удаляющую игрока
+    #   он мог не получить ответ или просто не прийти на WebSocket
+
     return ConnectResponse(
         host=config.ws_url,
         player_token=player.token,
@@ -449,10 +454,11 @@ async def websocket_endpoint(
         await websocket.close()
         return
 
-    remote_player = RemotePlayer(websocket=websocket, lobby=lobby)
     try:
-        player = lobby.connect(player_token, remote_player)
-    except UnknownPlayerError:
+        player = player_by_token[player_token]
+        remote_player = RemotePlayer(websocket=websocket, lobby=lobby, player=player)
+        lobby.connect(player, remote_player)
+    except (KeyError, UnknownPlayerError):
         await websocket.send_json(
             {"type": "error", "data": {"status": 404, "message": "Player not found"}}
         )
