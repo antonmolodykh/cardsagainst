@@ -479,18 +479,20 @@ async def websocket_endpoint(
             del lobbies[lobby_token]
             print(f"Lobby deleted. lobbies={lobbies}")
 
-    try:
         while True:
-            json_data = await websocket.receive_json()
-            print(f"Received event: {json_data}")
-            await handle_event(lobby, json_data, player, cards_dao=cards_dao)
-    except WebSocketDisconnect:
-        send_messages_task.cancel()
-        lobby.disconnect(player)
-        print("before remove")
-        remove_player_tasks[player_token] = asyncio.create_task(run_remove_player())
-    except Exception:
-        print(f"Unexpected error: {traceback.format_exc()}")
+            try:
+                json_data = await websocket.receive_json()
+                print(f"Received event: {json_data}")
+                await handle_event(lobby, json_data, player, cards_dao=cards_dao)
+            except WebSocketDisconnect:
+                send_messages_task.cancel()
+                lobby.disconnect(player)
+                print("before remove")
+                remove_player_tasks[player_token] = asyncio.create_task(
+                    run_remove_player()
+                )
+            except Exception:
+                print(f"Unexpected error: {traceback.format_exc()}")
 
 
 def is_card_picked(lobby: Lobby, card_on_table):
