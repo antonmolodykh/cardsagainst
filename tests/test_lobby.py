@@ -185,11 +185,10 @@ def test_player_joined(lobby: Lobby, yura: Player, observer: Mock) -> None:
 
 
 @pytest.mark.usefixtures("egor_connected", "yura_joined")
-def test_player_connected(lobby: Lobby, yura: Player, observer: Mock) -> None:
+def test_connect_player(lobby: Lobby, yura: Player, observer: Mock) -> None:
     player_mock = Mock(LobbyObserver)
     observer.attach_mock(player_mock, "yura")
-    yura.observer = player_mock
-    lobby.connect(yura)
+    lobby.connect(yura, player_mock)
 
     expected_events = [
         call.egor.player_connected(yura),
@@ -199,8 +198,8 @@ def test_player_connected(lobby: Lobby, yura: Player, observer: Mock) -> None:
 
 
 @pytest.mark.usefixtures("egor_connected", "yura_connected")
-def test_player_disconnected(lobby: Lobby, yura: Player, observer: Mock) -> None:
-    lobby.set_disconnected(yura)
+def test_disconnect_player(lobby: Lobby, yura: Player, observer: Mock) -> None:
+    lobby.disconnect(yura)
 
     expected_events = [
         call.egor.player_disconnected(yura),
@@ -458,7 +457,7 @@ async def test_owner_removed(
     yura: Player,
     observer: Mock,
 ) -> None:
-    lobby.set_disconnected(egor)
+    lobby.disconnect(egor)
     assert lobby.owner is egor
     lobby.remove_player(egor)
     assert lobby.owner is yura
@@ -468,8 +467,21 @@ async def test_owner_removed(
     observer.assert_has_calls(expected_events)
 
 
-@pytest.mark.usefixtures("egor_connected")
-async def test_bury_removed_player(lobby: Lobby, egor: Player) -> None:
-    lobby.set_disconnected(egor)
-    lobby.remove_player(egor)
-    assert egor in lobby.grave
+@pytest.mark.usefixtures("yura_connected", "egor_connected", "game_started")
+async def test_resurrect(
+    lobby: Lobby, egor: Player, yura: Player, observer: Mock
+) -> None:
+    lobby.disconnect(yura)
+    assert yura in lobby.all_players
+    lobby.remove_player(yura)
+    assert yura not in lobby.all_players
+    assert yura in lobby.grave
+
+    lobby.connect(yura, observer.yura)
+
+    expected_events = [
+        call.yura.welcome(),
+        call.egor.player_joined(yura),
+        call.egor.player_connected(yura),
+    ]
+    observer.assert_has_calls(expected_events, any_order=True)

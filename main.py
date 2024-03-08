@@ -4,8 +4,9 @@ import asyncio
 import traceback
 from asyncio import Task
 from enum import StrEnum
-from typing import Generic, TypeVar
+from typing import Generic, MutableMapping, TypeVar
 from uuid import uuid4
+from weakref import WeakValueDictionary
 
 from fastapi import FastAPI, HTTPException, Query, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
@@ -19,6 +20,7 @@ from dao import CardsDAO
 from dependencies import CardsDAODependency, lifespan
 from lobby import (
     CardOnTable,
+    GameAlreadyStartedError,
     Gathering,
     Judgement,
     Lobby,
@@ -29,13 +31,12 @@ from lobby import (
     PunchlineCard,
     SetupCard,
     Turns,
-    GameAlreadyStartedError, UnknownPlayerError,
+    UnknownPlayerError,
 )
 
 observers: list[LobbyObserver] = []
 
 app = FastAPI(lifespan=lifespan)
-
 
 app.add_middleware(
     CORSMiddleware,
@@ -45,7 +46,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-players: dict[str, Player] = {}
+player_by_token: MutableMapping[str, Player] = WeakValueDictionary()
 lobbies: dict[str, Lobby] = {}
 remove_player_tasks: dict[str, Task] = {}
 
@@ -129,10 +130,10 @@ class GameStartedData(ApiModel):
 
 
 class RemotePlayer(LobbyObserver):
-    def __init__(self, websocket: WebSocket, player: Player, lobby: Lobby) -> None:
+    def __init__(self, websocket: WebSocket, lobby: Lobby, player: Player) -> None:
         self.lobby = lobby
-        self.player = player
         self.websocket = websocket
+        self.player = player
         self._queue = asyncio.Queue()
 
     def owner_changed(self, player: Player):
@@ -396,36 +397,24 @@ async def connect(
     connect_request: ConnectRequest,
     cards_dao: CardsDAODependency,
 ) -> ConnectResponse:
+    player = Player(
+        profile=Profile(
+            name=connect_request.name,
+            emoji=connect_request.emoji,
+        ),
+        token=uuid4().hex[:8],
+    )
     if lobby_token:
         try:
             lobby = lobbies[lobby_token]
         except KeyError:
             raise HTTPException(status_code=404)
-        player = Player(
-            profile=Profile(
-                name=connect_request.name,
-                emoji=connect_request.emoji,
-            ),
-            token=uuid4().hex[:8],
-        )
     else:
-        player = Player(
-            profile=Profile(
-                name=connect_request.name,
-                emoji=connect_request.emoji,
-            ),
-            token=uuid4().hex[:8],
-        )
-        setups = await cards_dao.get_setups(deck_id="one")
-        punchlines = await cards_dao.get_punchlines(deck_id="one")
         lobby = Lobby(
-            LobbySettings(
-                winning_score=config.winning_score,
-            ),
-            players=[],
+            LobbySettings(winning_score=config.winning_score),
             owner=player,
-            setups=setups,
-            punchlines=punchlines,
+            setups=await cards_dao.get_setups(deck_id="one"),
+            punchlines=await cards_dao.get_punchlines(deck_id="one"),
             state=Gathering(),
         )
         lobby_token = uuid4().hex[:8]
@@ -437,6 +426,10 @@ async def connect(
     except GameAlreadyStartedError:
         raise HTTPException(status_code=403)
 
+    player_by_token[player.token] = player
+    remove_player_tasks[player.token] = asyncio.create_task(
+        run_remove_player(lobby, player, lobby_token, player.token)
+    )
     return ConnectResponse(
         host=config.ws_url,
         player_token=player.token,
@@ -461,11 +454,11 @@ async def websocket_endpoint(
         await websocket.close()
         return
 
-    observer = RemotePlayer(websocket=websocket, lobby=lobby, player=player)
-
     try:
-        player = lobby.connect(player_token)
-    except UnknownPlayerError:
+        player = player_by_token[player_token]
+        remote_player = RemotePlayer(websocket=websocket, lobby=lobby, player=player)
+        lobby.connect(player, remote_player)
+    except (KeyError, UnknownPlayerError):
         await websocket.send_json(
             {"type": "error", "data": {"status": 404, "message": "Player not found"}}
         )
@@ -473,22 +466,10 @@ async def websocket_endpoint(
         return
 
     if player_token in remove_player_tasks:
-        remove_player_tasks[player_token].cancel()
-        del remove_player_tasks[player_token]
+        task = remove_player_tasks.pop(player_token)
+        task.cancel()
 
-    send_messages_task = asyncio.create_task(observer.send_messages())
-    player.observer = observer
-
-    lobby.connect(player)
-
-    async def run_remove_player():
-        print(f"Player removal scheduled, player_token={player_token}")
-        await asyncio.sleep(config.player_removal_delay)
-        lobby.remove_player(player)
-        lobby.remove_player(player)
-        if not lobby.all_players:
-            del lobbies[lobby_token]
-            print(f"Lobby deleted. lobbies={lobbies}")
+    send_messages_task = asyncio.create_task(remote_player.send_messages())
 
     while True:
         try:
@@ -497,12 +478,23 @@ async def websocket_endpoint(
             await handle_event(lobby, json_data, player, cards_dao=cards_dao)
         except WebSocketDisconnect:
             send_messages_task.cancel()
-            lobby.set_disconnected(player)
+            lobby.disconnect(player)
             print("before remove")
-            remove_player_tasks[player_token] = asyncio.create_task(run_remove_player())
+            remove_player_tasks[player_token] = asyncio.create_task(
+                run_remove_player(lobby, player, lobby_token, player_token)
+            )
             break
         except Exception:
             print(f"Unexpected error: {traceback.format_exc()}")
+
+
+async def run_remove_player(lobby, player, lobby_token, player_token):
+    print(f"Player removal scheduled, player_token={player_token}")
+    await asyncio.sleep(config.player_removal_delay)
+    lobby.remove_player(player)
+    if not lobby.all_players:
+        del lobbies[lobby_token]
+        print(f"Lobby deleted. lobbies={lobbies}")
 
 
 def is_card_picked(lobby: Lobby, card_on_table):
@@ -517,6 +509,7 @@ async def handle_event(
     lobby: Lobby, json_data: dict, player, cards_dao: CardsDAO
 ) -> None:
     match json_data["type"]:
+        # TODO: Вынести эти методы в плеера, тогда это можно перетащить в remote player
         case "startGame":
             event = Event[StartGameData].model_validate(json_data)
             lobby.state.start_game(

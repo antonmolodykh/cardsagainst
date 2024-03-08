@@ -4,11 +4,10 @@ import asyncio
 import random
 from asyncio import Task
 from dataclasses import dataclass
-from typing import Collection, Generic, TypeVar
+from typing import Generic, TypeVar
 from uuid import uuid4
 
-from pydantic import BaseModel, Field
-from typing_extensions import Annotated
+from pydantic import BaseModel
 
 lobbies = {}
 
@@ -35,7 +34,6 @@ class NotAllCardsOpenedError(Exception):
 
 class UnknownPlayerError(Exception):
     pass
-
 
 
 class LobbyObserver:
@@ -123,11 +121,12 @@ class Player:
         self.uuid = uuid4().hex
         self.observer = LobbyObserver()
 
-    def set_connected(self) -> None:
+    def connect(self, observer: LobbyObserver) -> None:
         self.is_connected = True
-        self.observer.welcome()
+        self.observer = observer
+        observer.welcome()
 
-    def set_disconnected(self) -> None:
+    def disconnect(self) -> None:
         self.observer = LobbyObserver()
         self.is_connected = False
 
@@ -185,9 +184,7 @@ class State:
     lobby: Lobby
 
     def handle_player_removal(self):
-        raise Exception(
-            f"method `handle_player_removal` not expected in state {type(self).__name__}"
-        )
+        pass
 
     def make_turn(self, player: Player, card: PunchlineCard) -> None:
         raise Exception(
@@ -399,27 +396,13 @@ class Finished(State):
         self.lobby.state.start_game(player, lobby_settings, setups, punchlines)
 
 
-class Grave:
-    data: dict[str, Player]
-
-    def __init__(self, lobby: Lobby):
-        self.lobby = lobby
-
-    def bury(self, player: Player):
-        self.data[player.token] = player
-
-    def resurrect(self, player_token: str):
-        player = self.data[player_token]
-        self.lobby.add_player(self)
-
-
 class Lobby:
     uid: uuid4
     players: list[Player]
     lead: Player | None
     owner: Player
     table: list[CardOnTable]
-    grave: set
+    grave: set[Player]
     punchlines: Deck[PunchlineCard]
     setups: Deck[SetupCard]
     observer: LobbyObserver
@@ -432,13 +415,12 @@ class Lobby:
     def __init__(
         self,
         settings: LobbySettings,
-        players: Collection[Player],
         owner: Player,
         setups: Deck[SetupCard],
         punchlines: Deck[PunchlineCard],
         state: Gathering,
     ) -> None:
-        self.players = list(players)
+        self.players = []
         self.lead = None
         self.owner = owner
         self.table = []
@@ -525,27 +507,26 @@ class Lobby:
                 return card_on_table
         raise NotImplemented
 
-    def connect(self, player_token: str) -> Player:
-        for player in self.all_players:
-            if player_token == player.token:
-                break
-        else:
-            for player in self.grave:
-                if player_token == player.token:
-                    self.grave.remove(player)
-                    self.players.append(player)
-                    break
-            else:
+    def connect(self, player: Player, observer: LobbyObserver) -> None:
+        if player not in self.all_players:
+            if player not in self.grave:
                 raise UnknownPlayerError()
 
-        player.set_connected()
+            self.grave.remove(player)
+
+            # TODO: Можно использовать lobby.add_player, если
+            #   разрешим присоединяться во время игры
+            self.players.append(player)
+            for pl in self.all_players:
+                pl.observer.player_joined(player)
+
+        player.connect(observer)
+
         for pl in self.all_players_except(player):
             pl.observer.player_connected(player)
 
-        return player
-
-    def set_disconnected(self, player: Player):
-        player.set_disconnected()
+    def disconnect(self, player: Player) -> None:
+        player.disconnect()
 
         for pl in self.all_players_except(player):
             pl.observer.player_disconnected(player)
@@ -573,10 +554,14 @@ class Lobby:
 
         self.grave.add(player)
 
+        # TODO: Кажется, не надо сбрасывать руку, если игрока похоронили
+        #   Мы можем воскресить его с теми же картами, если не началась новая игра
         self.punchlines.dump(player.hand)
         for card_on_table in self.table:
             if card_on_table.player is player:
                 self.punchlines.dump([card_on_table.card])
+                # TODO: Если сбросить карту игрока, то надо как-то оповестить
+                #   остальных, что эту карту надо убрать со стола
                 self.table.remove(card_on_table)
                 print(f"Card is dumped and removed from the table. table={self.table}")
                 break

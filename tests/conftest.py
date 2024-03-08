@@ -59,23 +59,17 @@ def observer() -> Mock:
 
 @pytest.fixture
 def egor() -> Player:
-    return Player(
-        profile=Profile(name="egor", emoji="🍎", background_color="#ff0000"),
-    )
+    return Player(profile=Profile(name="egor", emoji="🍎"), token="egor-token")
 
 
 @pytest.fixture
 def anton() -> Player:
-    return Player(
-        profile=Profile(name="anton", emoji="🍎", background_color="#ff0000"),
-    )
+    return Player(profile=Profile(name="anton", emoji="🍎"), token="anton-token")
 
 
 @pytest.fixture
 def yura() -> Player:
-    return Player(
-        profile=Profile(name="yura", emoji="🍎", background_color="#ff0000"),
-    )
+    return Player(profile=Profile(name="yura", emoji="🍎"), token="yura-token")
 
 
 @pytest.fixture
@@ -99,7 +93,6 @@ def lobby(  # TODO: Переименовать в лобби егора, что�
 ) -> Lobby:
     return Lobby(
         settings=lobby_settings,
-        players=[],
         owner=egor,
         state=state_gathering,
         # TODO: state gathering determines the setups and punchlines
@@ -119,9 +112,8 @@ def egor_connected(
     egor_joined: None, lobby: Lobby, egor: Player, observer: Mock
 ) -> None:
     player_mock = Mock(LobbyObserver)
+    lobby.connect(egor, player_mock)
     observer.attach_mock(player_mock, "egor")
-    egor.observer = player_mock
-    lobby.connect(egor)
 
 
 @pytest.fixture
@@ -134,9 +126,8 @@ def anton_connected(
     anton_joined: None, lobby: Lobby, anton: Player, observer: Mock
 ) -> None:
     player_mock = Mock(LobbyObserver)
+    lobby.connect(anton, player_mock)
     observer.attach_mock(player_mock, "anton")
-    anton.observer = player_mock
-    lobby.connect(anton)
 
 
 @pytest.fixture
@@ -149,9 +140,8 @@ def yura_connected(
     yura_joined: None, lobby: Lobby, yura: Player, observer: Mock
 ) -> None:
     player_mock = Mock(LobbyObserver)
+    lobby.connect(yura, player_mock)
     observer.attach_mock(player_mock, "yura")
-    yura.observer = player_mock
-    lobby.connect(yura)
 
 
 @pytest.fixture
