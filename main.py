@@ -427,8 +427,9 @@ async def connect(
         raise HTTPException(status_code=403)
 
     player_by_token[player.token] = player
-    remove_player_tasks[player_token] = asyncio.create_task(run_remove_player())
-
+    remove_player_tasks[player.token] = asyncio.create_task(
+        run_remove_player(lobby, player, lobby_token, player.token)
+    )
     return ConnectResponse(
         host=config.ws_url,
         player_token=player.token,
@@ -470,14 +471,6 @@ async def websocket_endpoint(
 
     send_messages_task = asyncio.create_task(remote_player.send_messages())
 
-    async def run_remove_player():
-        print(f"Player removal scheduled, player_token={player_token}")
-        await asyncio.sleep(config.player_removal_delay)
-        lobby.remove_player(player)
-        if not lobby.all_players:
-            del lobbies[lobby_token]
-            print(f"Lobby deleted. lobbies={lobbies}")
-
     while True:
         try:
             json_data = await websocket.receive_json()
@@ -487,10 +480,21 @@ async def websocket_endpoint(
             send_messages_task.cancel()
             lobby.disconnect(player)
             print("before remove")
-            remove_player_tasks[player_token] = asyncio.create_task(run_remove_player())
+            remove_player_tasks[player_token] = asyncio.create_task(
+                run_remove_player(lobby, player, lobby_token, player_token)
+            )
             break
         except Exception:
             print(f"Unexpected error: {traceback.format_exc()}")
+
+
+async def run_remove_player(lobby, player, lobby_token, player_token):
+    print(f"Player removal scheduled, player_token={player_token}")
+    await asyncio.sleep(config.player_removal_delay)
+    lobby.remove_player(player)
+    if not lobby.all_players:
+        del lobbies[lobby_token]
+        print(f"Lobby deleted. lobbies={lobbies}")
 
 
 def is_card_picked(lobby: Lobby, card_on_table):
