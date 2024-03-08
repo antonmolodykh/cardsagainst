@@ -12,12 +12,13 @@ from fastapi import FastAPI, HTTPException, Query, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ConfigDict
 from pydantic.alias_generators import to_camel
+from sqlalchemy import select
 from starlette.websockets import WebSocketDisconnect
 from typing_extensions import Annotated
 
 from config import config
 from dao import CardsDAO
-from dependencies import CardsDAODependency, lifespan
+from dependencies import CardsDAODependency, lifespan, SessionDependency
 from lobby import (
     CardOnTable,
     GameAlreadyStartedError,
@@ -33,6 +34,7 @@ from lobby import (
     Turns,
     UnknownPlayerError,
 )
+from models import Changelog
 
 observers: list[LobbyObserver] = []
 
@@ -60,19 +62,29 @@ def get_player_data_from_player(player: Player) -> PlayerData:
         uuid=player.uuid,
         name=player.profile.name,
         emoji=player.profile.emoji,
-        background_color=player.profile.background_color,
         state=PlayerState.PENDING,
         score=player.score,
         is_connected=player.is_connected,
     )
 
 
+# TODO: зачем оно здесь?
 queue = asyncio.Queue()
 
 
 async def send_messages():
     while True:
         event = await queue.get()
+
+
+class ChangelogData(ApiModel):
+    version: str
+    text: str
+
+
+class ChangelogResponse(ApiModel):
+    changelog: list[ChangelogData]
+    current_version: str
 
 
 class PlayerIdData(ApiModel):
@@ -268,7 +280,7 @@ class RemotePlayer(LobbyObserver):
                         else None
                     ),
                     timeout=self.lobby.settings.turn_duration,
-                    lead_uuid=self.lobby.lead.uuid,
+                    lead_uuid=self.lobby.lead.uuid if self.lobby.lead else None,
                     owner_uuid=self.lobby.owner.uuid,
                     self_uuid=self.player.uuid,
                     selected_card=(
@@ -293,7 +305,6 @@ class ConnectRequest(BaseModel):
 
     name: str
     emoji: str
-    background_color: str
 
 
 class PlayerState(StrEnum):
@@ -330,7 +341,6 @@ class PlayerData(ApiModel):
     uuid: str
     name: str
     emoji: str
-    background_color: str
     state: PlayerState
     score: int
     is_connected: bool
@@ -378,7 +388,7 @@ class LobbyState(ApiModel):
     setup: SetupData | None
     timeout: int | None
     lead_uuid: str | None
-    owner_uuid: str | None
+    owner_uuid: str
     self_uuid: str | None
     turn_count: int | None
     selected_card: PunchlineData | None = None
@@ -542,6 +552,49 @@ async def handle_event(
         case "continueGame":
             lobby.state.continue_game(player)
 
+
+@app.get("/changelog")
+async def changelog(
+    async_session: SessionDependency,
+    version: Annotated[str | None, Query(alias="version")] = None,
+):
+    async with async_session() as session:
+        query = (
+            select(Changelog.version)
+            .order_by(Changelog.id.desc())
+            .limit(1)
+        )
+        result = await session.execute(query)
+        current_version = result.first()[0]
+
+    if not version:
+        return ChangelogResponse(
+            changelog=[],
+            current_version=current_version,
+        )
+
+    subquery_clause = (
+        select(Changelog.id)
+        .where(Changelog.version == version)
+        .order_by(Changelog.id.desc())
+        .limit(1)
+    )
+    subquery = subquery_clause.subquery()
+
+    query = select(
+        Changelog.version, Changelog.text
+    ).where(Changelog.id > subquery.c.id)
+
+    async with async_session() as session:
+        result = await session.execute(query)
+    records = result.all()
+
+    return ChangelogResponse(
+        changelog=[
+            ChangelogData(version=record[0], text=record[1]) for record in records
+        ],
+        current_version=current_version,
+    )
 
 @app.get("/")
 def health() -> str:
