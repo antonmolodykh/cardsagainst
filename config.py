@@ -4,8 +4,6 @@ import dynaconf
 
 root_path = Path(__file__).parent / "configs"
 
-print(root_path)
-
 config = dynaconf.Dynaconf(
     environments=True,
     settings_files=[

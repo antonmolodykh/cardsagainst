@@ -4,11 +4,10 @@ import asyncio
 import random
 from asyncio import Task
 from dataclasses import dataclass
-from typing import Collection, Generic, TypeVar
+from typing import Generic, TypeVar
 from uuid import uuid4
 
-from pydantic import BaseModel, Field
-from typing_extensions import Annotated
+from pydantic import BaseModel
 
 lobbies = {}
 
@@ -17,7 +16,7 @@ class CardNotInPlayerHandError(Exception):
     pass
 
 
-class PlayerNotDealerError(Exception):
+class PlayerNotLeadError(Exception):
     pass
 
 
@@ -33,11 +32,8 @@ class NotAllCardsOpenedError(Exception):
     pass
 
 
-# class State(Enum):
-#     MOVE = "move"
-#     JUDGING = "judging"
-#     PENDING_START = "pending start"
-#     FINISHED = "finished"
+class UnknownPlayerError(Exception):
+    pass
 
 
 class LobbyObserver:
@@ -84,6 +80,9 @@ class LobbyObserver:
     def game_finished(self, winner: Player):
         pass
 
+    def welcome(self):
+        pass
+
 
 @dataclass
 class SetupCard:
@@ -102,28 +101,32 @@ class PunchlineCard:
 class Profile(BaseModel):
     name: str
     emoji: str
-    background_color: str  # TODO: remove
 
 
 class Player:
     observer: LobbyObserver
+    lobby: Lobby
     uuid: str
     hand: list[PunchlineCard]
     score: int = 0
     profile: Profile
+    token: str
     is_ready = False
     is_connected: bool = False
 
-    def __init__(self, profile: Profile) -> None:
+    def __init__(self, profile: Profile, token: str) -> None:
         self.profile = profile
+        self.token = token
         self.hand = []
         self.uuid = uuid4().hex
         self.observer = LobbyObserver()
 
-    def set_connected(self) -> None:
+    def connect(self, observer: LobbyObserver) -> None:
         self.is_connected = True
+        self.observer = observer
+        observer.welcome()
 
-    def set_disconnected(self) -> None:
+    def disconnect(self) -> None:
         self.observer = LobbyObserver()
         self.is_connected = False
 
@@ -180,6 +183,9 @@ class LobbySettings(BaseModel):
 class State:
     lobby: Lobby
 
+    def handle_player_removal(self):
+        pass
+
     def make_turn(self, player: Player, card: PunchlineCard) -> None:
         raise Exception(
             f"method `make_turn` not expected in state {type(self).__name__}"
@@ -197,7 +203,7 @@ class State:
 
     def start_turn(self):
         raise Exception(
-            f"method `pick_turn_winner` not expected in state {type(self).__name__}"
+            f"method `start_turn` not expected in state {type(self).__name__}"
         )
 
     def pick_turn_winner(self, player: Player, card: PunchlineCard):
@@ -208,6 +214,11 @@ class State:
     def continue_game(self, player: Player) -> None:
         raise Exception(
             f"method `continue_game` not expected in state {type(self).__name__}"
+        )
+
+    def end_turn(self):
+        raise Exception(
+            f"method `end_turn` not expected in state {type(self).__name__}"
         )
 
 
@@ -231,45 +242,43 @@ class Gathering(State):
                 pl.add_punchline_card(self.lobby.punchlines.get_card())
             pl.observer.game_started(pl)
 
-        self.start_turn()
-
-    def start_turn(self):
-        new_setup = self.lobby.setups.get_card()
-        self.lobby.turn_count += 1
-        self.lobby.transit_to(Turns(new_setup, self.lobby.settings.turn_duration))
-        for pl in self.lobby.all_players:
-            pl.observer.turn_started(
-                setup=new_setup,
-                turn_duration=self.lobby.settings.turn_duration,
-                lead=self.lobby.lead,
-                turn_count=self.lobby.turn_count,
-            )
+        self.lobby.start_turn()
 
 
 class Turns(State):
-    def __init__(self, setup: SetupCard, turn_duration: int):
+    def __init__(self, setup: SetupCard, timer: Task):
         self.setup = setup
-        self.timer: Task = asyncio.create_task(self.set_timer(turn_duration))
+        self.timer = timer
 
-    async def set_timer(self, turn_duration: int) -> None:
-        await asyncio.sleep(turn_duration)
-        for player in self.lobby.players:
-            if not player.is_connected:
-                continue
-            if not player.is_ready:
-                self.choose_punchline_card(player, random.choice(player.hand))
-
-        self.to_judgement()
+    def handle_player_removal(self):
+        self.try_end_turn()
 
     def make_turn(self, player: Player, card: PunchlineCard) -> None:
         self.choose_punchline_card(player, card)
+        self.try_end_turn()
 
+    def try_end_turn(self) -> None:
         for pl in self.lobby.players:
             if pl.is_connected and not pl.is_ready:
                 return
 
         self.timer.cancel()
-        self.to_judgement()
+        self.end_turn()
+
+    def end_turn(self):
+        for player in self.lobby.players:
+            if player.is_connected and not player.is_ready:
+                self.choose_punchline_card(player, random.choice(player.hand))
+
+        random.shuffle(self.lobby.table)
+        for pl in self.lobby.all_players:
+            pl.observer.all_players_ready()
+
+        if self.lobby.lead:
+            self.lobby.transit_to(Judgement(self.setup))
+        else:
+            # self.lobby.transit_to(Voting(self.setup))
+            raise NotImplemented
 
     def choose_punchline_card(self, player: Player, card: PunchlineCard) -> None:
         if card not in player.hand:
@@ -281,12 +290,6 @@ class Turns(State):
         for pl in self.lobby.all_players:
             pl.observer.player_ready(player)
 
-    def to_judgement(self):
-        self.lobby.transit_to(Judgement(self.setup))
-        random.shuffle(self.lobby.table)
-        for pl in self.lobby.all_players:
-            pl.observer.all_players_ready()
-
 
 class Judgement(State):
     winner: Player | None
@@ -295,9 +298,17 @@ class Judgement(State):
         self.setup = setup
         self.winner = None
 
+    def handle_player_removal(self):
+        if self.lobby.lead is None:
+            self.start_voting()
+
+    def start_voting(self):
+        # self.lobby.transit_to(Voting(self.setup))
+        raise NotImplemented
+
     def open_punchline_card(self, player: Player, card_on_table: CardOnTable) -> None:
         if self.lobby.lead is not player:
-            raise PlayerNotDealerError
+            raise PlayerNotLeadError
 
         card_on_table.is_open = True
         for pl in self.lobby.all_players:
@@ -305,7 +316,7 @@ class Judgement(State):
 
     def pick_turn_winner(self, player, card) -> None:
         if player is not self.lobby.lead:
-            raise PlayerNotDealerError
+            raise PlayerNotLeadError
 
         for card_on_table in self.lobby.table:
             if not card_on_table.is_open:
@@ -341,31 +352,8 @@ class Judgement(State):
         asyncio.create_task(start_turn())
 
     def start_turn(self):
-        previous_lead = self.lobby.lead
-        self.lobby.change_lead()
         self.lobby.setups.dump([self.setup])
-
-        new_setup = self.lobby.setups.get_card()
-        self.lobby.turn_count += 1
-        turn_duration = self.lobby.settings.turn_duration
-        self.lobby.transit_to(Turns(new_setup, turn_duration))
-        for pl in self.lobby.all_players_except(previous_lead):
-            new_card = self.lobby.punchlines.get_card()
-            pl.add_punchline_card(new_card)
-            pl.is_ready = False
-            pl.observer.turn_started(
-                setup=new_setup,
-                turn_duration=turn_duration,
-                lead=self.lobby.lead,
-                card=new_card,
-                turn_count=self.lobby.turn_count,
-            )
-        previous_lead.observer.turn_started(
-            setup=new_setup,
-            turn_duration=turn_duration,
-            lead=self.lobby.lead,
-            turn_count=self.lobby.turn_count,
-        )
+        self.lobby.start_turn()
 
     def finish_game(self, winner: Player):
         for pl in self.lobby.all_players:
@@ -380,31 +368,8 @@ class Finished(State):
         self.winner = winner
 
     def start_turn(self):
-        previous_lead = self.lobby.lead
-        self.lobby.change_lead()
         self.lobby.setups.dump([self.setup])
-
-        new_setup = self.lobby.setups.get_card()
-        self.lobby.turn_count += 1
-        turn_duration = self.lobby.settings.turn_duration
-        self.lobby.transit_to(Turns(new_setup, turn_duration))
-        for pl in self.lobby.all_players_except(previous_lead):
-            new_card = self.lobby.punchlines.get_card()
-            pl.add_punchline_card(new_card)
-            pl.is_ready = False
-            pl.observer.turn_started(
-                setup=new_setup,
-                turn_duration=turn_duration,
-                lead=self.lobby.lead,
-                card=new_card,
-                turn_count=self.lobby.turn_count,
-            )
-        previous_lead.observer.turn_started(
-            setup=new_setup,
-            turn_duration=turn_duration,
-            lead=self.lobby.lead,
-            turn_count=self.lobby.turn_count,
-        )
+        self.lobby.start_turn()
 
     def continue_game(self, player: Player) -> None:
         if player is not self.lobby.owner:
@@ -435,8 +400,9 @@ class Lobby:
     uid: uuid4
     players: list[Player]
     lead: Player | None
-    owner: Player | None
+    owner: Player
     table: list[CardOnTable]
+    grave: set[Player]
     punchlines: Deck[PunchlineCard]
     setups: Deck[SetupCard]
     observer: LobbyObserver
@@ -449,15 +415,16 @@ class Lobby:
     def __init__(
         self,
         settings: LobbySettings,
-        players: Collection[Player],
+        owner: Player,
         setups: Deck[SetupCard],
         punchlines: Deck[PunchlineCard],
         state: Gathering,
     ) -> None:
-        self.players = list(players)
+        self.players = []
         self.lead = None
-        self.owner = None
+        self.owner = owner
         self.table = []
+        self.grave = set()
         self.uid = uuid4()
         self.punchlines = punchlines
         self.setups = setups
@@ -483,7 +450,7 @@ class Lobby:
 
     def change_owner(self) -> None:
         self.owner = None
-        for player in self.players:
+        for player in self.all_players:
             if player.is_connected:
                 self.owner = player
                 return
@@ -496,8 +463,43 @@ class Lobby:
 
     def change_lead(self) -> None:
         # TODO: можем на дисконектнутого смениться?
-        self.players.append(self.lead)
+        # TODO: Выбирать, нужен ли лид по режиму игры
+        if self.lead:
+            self.players.append(self.lead)
+        # TODO: Что делать в ситуации, когда не осталось игроков?
         self.lead = self.players.pop(0)
+
+    def start_turn(self):
+        self.change_lead()
+        new_setup = self.setups.get_card()
+        self.turn_count += 1
+
+        async def turn_timer() -> None:
+            if turn_duration := self.settings.turn_duration:
+                await asyncio.sleep(turn_duration)
+                self.state.end_turn()
+
+        self.transit_to(Turns(new_setup, asyncio.create_task(turn_timer())))
+
+        for pl in self.all_players:
+            pl.is_ready = False
+            if len(pl.hand) != self.HAND_SIZE:
+                new_card = self.punchlines.get_card()
+                pl.add_punchline_card(new_card)
+                pl.observer.turn_started(
+                    setup=new_setup,
+                    turn_duration=self.settings.turn_duration,
+                    lead=self.lead,
+                    card=new_card,
+                    turn_count=self.turn_count,
+                )
+            else:
+                pl.observer.turn_started(
+                    setup=new_setup,
+                    turn_duration=self.settings.turn_duration,
+                    lead=self.lead,
+                    turn_count=self.turn_count,
+                )
 
     def get_card_from_table(self, card) -> CardOnTable:
         for card_on_table in self.table:
@@ -505,51 +507,61 @@ class Lobby:
                 return card_on_table
         raise NotImplemented
 
-    def set_connected(self, player: Player):
-        player.set_connected()
-        if not self.owner:
-            self.owner = player
+    def connect(self, player: Player, observer: LobbyObserver) -> None:
+        if player not in self.all_players:
+            if player not in self.grave:
+                raise UnknownPlayerError()
+
+            self.grave.remove(player)
+
+            # TODO: Можно использовать lobby.add_player, если
+            #   разрешим присоединяться во время игры
+            self.players.append(player)
+            for pl in self.all_players:
+                pl.observer.player_joined(player)
+
+        player.connect(observer)
+
         for pl in self.all_players_except(player):
             pl.observer.player_connected(player)
 
-    def set_disconnected(self, player: Player):
-        was_owner = False
-
-        player.set_disconnected()
-        if player is self.owner:
-            was_owner = True
-            self.change_owner()
+    def disconnect(self, player: Player) -> None:
+        player.disconnect()
 
         for pl in self.all_players_except(player):
             pl.observer.player_disconnected(player)
-            if was_owner:
-                # Если отключившийся был owner'ом
-                pl.observer.owner_changed(player)
-        # обработать если осталось менее 2 игроков
 
     def add_player(self, player: Player):
         if not isinstance(self.state, Gathering):
             raise GameAlreadyStartedError
 
-        if not self.lead:
-            self.lead = player
-        else:
-            self.players.append(player)
+        self.players.append(player)
 
         for pl in self.all_players:
             pl.observer.player_joined(player)
 
     def remove_player(self, player: Player):
         if player is self.lead:
-            self.lead = None  # пускай никто не будет лидом на гезеринге
-            # TODO: New Turn, reorder lead
+            self.lead = None
+            # TODO: Обрабатывать переход на голосование / смену лида
         if player in self.players:
             self.players.remove(player)
 
+        if player is self.owner:
+            self.change_owner()
+            for pl in self.all_players_except(player):
+                pl.observer.owner_changed(self.owner)
+
+        self.grave.add(player)
+
+        # TODO: Кажется, не надо сбрасывать руку, если игрока похоронили
+        #   Мы можем воскресить его с теми же картами, если не началась новая игра
         self.punchlines.dump(player.hand)
         for card_on_table in self.table:
             if card_on_table.player is player:
                 self.punchlines.dump([card_on_table.card])
+                # TODO: Если сбросить карту игрока, то надо как-то оповестить
+                #   остальных, что эту карту надо убрать со стола
                 self.table.remove(card_on_table)
                 print(f"Card is dumped and removed from the table. table={self.table}")
                 break
@@ -557,3 +569,4 @@ class Lobby:
         for pl in self.all_players_except(player):
             pl.observer.player_left(player)
         print(f"Removed. self.lead={self.lead}, self.players={self.players}")
+        self.state.handle_player_removal()

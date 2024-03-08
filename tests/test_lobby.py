@@ -8,10 +8,11 @@ from lobby import (
     Deck,
     Judgement,
     Lobby,
+    LobbyObserver,
     LobbySettings,
     NotAllCardsOpenedError,
     Player,
-    PlayerNotDealerError,
+    PlayerNotLeadError,
     PlayerNotOwnerError,
     PunchlineCard,
     SetupCard,
@@ -95,7 +96,7 @@ def test_open_punchline_card_member_not_lead(
     lobby.state.make_turn(anton, punchline_card)
 
     # TODO: Use `Lead` instead of `Dealer`
-    with pytest.raises(PlayerNotDealerError):
+    with pytest.raises(PlayerNotLeadError):
         assert isinstance(lobby.state, Judgement)
         lobby.state.open_punchline_card(
             anton, lobby.get_card_from_table(punchline_card)
@@ -184,18 +185,21 @@ def test_player_joined(lobby: Lobby, yura: Player, observer: Mock) -> None:
 
 
 @pytest.mark.usefixtures("egor_connected", "yura_joined")
-def test_player_connected(lobby: Lobby, yura: Player, observer: Mock) -> None:
-    lobby.set_connected(yura)
+def test_connect_player(lobby: Lobby, yura: Player, observer: Mock) -> None:
+    player_mock = Mock(LobbyObserver)
+    observer.attach_mock(player_mock, "yura")
+    lobby.connect(yura, player_mock)
 
     expected_events = [
         call.egor.player_connected(yura),
+        call.yura.welcome(),
     ]
-    observer.assert_has_calls(expected_events)
+    observer.assert_has_calls(expected_events, any_order=True)
 
 
 @pytest.mark.usefixtures("egor_connected", "yura_connected")
-def test_player_disconnected(lobby: Lobby, yura: Player, observer: Mock) -> None:
-    lobby.set_disconnected(yura)
+def test_disconnect_player(lobby: Lobby, yura: Player, observer: Mock) -> None:
+    lobby.disconnect(yura)
 
     expected_events = [
         call.egor.player_disconnected(yura),
@@ -378,7 +382,7 @@ async def test_start_game_after_finish(
         call.turn_started(
             setup=lobby.state.setup,
             turn_duration=10,
-            lead=egor,
+            lead=yura,
             turn_count=1,
         ),
     ]
@@ -388,8 +392,96 @@ async def test_start_game_after_finish(
         call.turn_started(
             setup=lobby.state.setup,
             turn_duration=10,
-            lead=egor,
+            lead=yura,
             turn_count=1,
         ),
     ]
     observer.yura.assert_has_calls(expected_events)
+
+
+@pytest.mark.usefixtures(
+    "egor_connected",
+    "yura_connected",
+    "anton_connected",
+    "game_started",
+)
+def test_player_not_ready_disconnected_transit_to_judgement(
+    lobby: Lobby,
+    anton: Player,
+    yura: Player,
+    egor: Player,
+) -> None:
+    lobby.state.make_turn(yura, yura.hand[0])
+    lobby.remove_player(anton)
+    assert isinstance(lobby.state, Judgement)
+
+
+@pytest.mark.xfail(reason="Не понятно, что делать если все игроки удалились")
+@pytest.mark.usefixtures("egor_connected", "yura_connected", "game_started")
+async def test_start_game_transit_to_turns(
+    lobby: Lobby,
+    egor: Player,
+    yura: Player,
+    lobby_settings: LobbySettings,
+    setup_deck: Deck[SetupCard],
+    punchline_deck: Deck[PunchlineCard],
+) -> None:
+    lobby.remove_player(egor)
+    lobby.remove_player(yura)
+    # FIXME: Что делать, если из лобби удалились все игроки?
+    #   Сейчас мы пытаемся идти голосовать
+
+
+@pytest.mark.usefixtures("yura_connected")
+async def test_owner_set_on_creation(
+    lobby: Lobby,
+    egor: Player,
+    yura: Player,
+    setup_deck: Deck[SetupCard],
+    punchline_deck: Deck[PunchlineCard],
+    lobby_settings: LobbySettings,
+) -> None:
+    with pytest.raises(PlayerNotOwnerError):
+        lobby.state.start_game(
+            yura,
+            lobby_settings,
+            setup_deck,
+            punchline_deck,
+        )
+
+
+@pytest.mark.usefixtures("yura_connected", "egor_connected", "game_started")
+async def test_owner_removed(
+    lobby: Lobby,
+    egor: Player,
+    yura: Player,
+    observer: Mock,
+) -> None:
+    lobby.disconnect(egor)
+    assert lobby.owner is egor
+    lobby.remove_player(egor)
+    assert lobby.owner is yura
+    expected_events = [
+        call.yura.owner_changed(yura),
+    ]
+    observer.assert_has_calls(expected_events)
+
+
+@pytest.mark.usefixtures("yura_connected", "egor_connected", "game_started")
+async def test_resurrect(
+    lobby: Lobby, egor: Player, yura: Player, observer: Mock
+) -> None:
+    lobby.disconnect(yura)
+    assert yura in lobby.all_players
+    lobby.remove_player(yura)
+    assert yura not in lobby.all_players
+    assert yura in lobby.grave
+
+    lobby.connect(yura, observer.yura)
+
+    expected_events = [
+        call.yura.welcome(),
+        call.egor.player_joined(yura),
+        call.egor.player_connected(yura),
+    ]
+    observer.assert_has_calls(expected_events, any_order=True)
