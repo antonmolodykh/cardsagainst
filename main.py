@@ -491,6 +491,7 @@ async def websocket_endpoint(
                 remove_player_tasks[player_token] = asyncio.create_task(
                     run_remove_player()
                 )
+                break
             except Exception:
                 print(f"Unexpected error: {traceback.format_exc()}")
 
