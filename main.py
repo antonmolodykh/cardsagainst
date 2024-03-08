@@ -559,11 +559,7 @@ async def changelog(
     version: Annotated[str | None, Query(alias="version")] = None,
 ):
     async with async_session() as session:
-        query = (
-            select(Changelog.version)
-            .order_by(Changelog.id.desc())
-            .limit(1)
-        )
+        query = select(Changelog.version).order_by(Changelog.id.desc()).limit(1)
         result = await session.execute(query)
         current_version = result.first()[0]
 
@@ -581,9 +577,9 @@ async def changelog(
     )
     subquery = subquery_clause.subquery()
 
-    query = select(
-        Changelog.version, Changelog.text
-    ).where(Changelog.id > subquery.c.id)
+    query = select(Changelog.version, Changelog.text).where(
+        Changelog.id > subquery.c.id
+    )
 
     async with async_session() as session:
         result = await session.execute(query)
@@ -595,6 +591,7 @@ async def changelog(
         ],
         current_version=current_version,
     )
+
 
 @app.get("/")
 def health() -> str:

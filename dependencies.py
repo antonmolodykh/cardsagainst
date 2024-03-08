@@ -22,7 +22,9 @@ def session_dependency() -> async_sessionmaker:
 
 
 CardsDAODependency: TypeAlias = Annotated[CardsDAO, Depends(cards_dao_dependency)]
-SessionDependency: TypeAlias = Annotated[async_sessionmaker, Depends(session_dependency)]
+SessionDependency: TypeAlias = Annotated[
+    async_sessionmaker, Depends(session_dependency)
+]
 
 
 @asynccontextmanager
