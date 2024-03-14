@@ -2,7 +2,10 @@
 name = "projects"
 version = "0.1.0"
 description = ""
-authors = ["amolodykh <antonmolodykh96@gmail.com>"]
+authors = [
+    "amolodykh <antonmolodykh96@gmail.com>",
+    "Yuriy Kehter <yuriy.kehter+420cards@gmail.com>"
+]
 readme = "README.md"
 
 [tool.pytest.ini_options]
