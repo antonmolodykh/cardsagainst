@@ -68,15 +68,6 @@ def get_player_data_from_player(player: Player) -> PlayerData:
     )
 
 
-# TODO: зачем оно здесь?
-queue = asyncio.Queue()
-
-
-async def send_messages():
-    while True:
-        event = await queue.get()
-
-
 class ChangelogData(ApiModel):
     version: str
     text: str
