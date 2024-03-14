@@ -217,11 +217,6 @@ class State:
             f"method `make_turn` not expected in state {type(self).__name__}"
         )
 
-    def choose_punchline_card(self, player: Player, card: PunchlineCard):
-        raise Exception(
-            f"method `choose_punchline_card` not expected in state {type(self).__name__}"
-        )
-
     def open_table_card(self, player: Player, card_on_table: CardOnTable) -> None:
         raise Exception(
             f"method `open_punchline_card` not expected in state {type(self).__name__}"
@@ -475,7 +470,8 @@ class Lobby:
         return None
 
     def change_owner(self) -> None:
-        self.owner = None
+        # TODO: Что делать, если не осталось игроков?
+        self.owner = None  # это поле не nullable
         for player in self.all_players:
             if player.is_connected:
                 self.owner = player
