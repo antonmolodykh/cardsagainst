@@ -204,6 +204,7 @@ class LobbySettings(BaseModel):
     turn_duration: int | None = None
     winning_score: int
     finish_delay: int = 5
+    start_turn_delay: int = 5
 
 
 class State:
@@ -367,7 +368,7 @@ class Judgement(State):
                     return
 
         async def start_turn():
-            await asyncio.sleep(5)
+            await asyncio.sleep(self.lobby.settings.start_turn_delay)
             self.start_turn()
 
         asyncio.create_task(start_turn())

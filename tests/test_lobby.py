@@ -286,8 +286,7 @@ async def test_continue_game_no_more_winner(
     yura.open_table_card(card_on_table)
     yura.pick_turn_winner(card_on_table.card)
 
-    # FIXME: Таймер мешает быстро тестировать
-    await asyncio.sleep(5.01)
+    await asyncio.sleep(0.01)
 
     assert egor.score == lobby_settings.winning_score
     assert isinstance(lobby.state, Turns)

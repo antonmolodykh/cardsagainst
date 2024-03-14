@@ -80,7 +80,12 @@ def state_gathering() -> Gathering:
 
 @pytest.fixture
 def lobby_settings() -> LobbySettings:
-    return LobbySettings(turn_duration=None, winning_score=1, finish_delay=0)
+    return LobbySettings(
+        turn_duration=None,
+        winning_score=1,
+        finish_delay=0,
+        start_turn_delay=0,
+    )
 
 
 @pytest.fixture
