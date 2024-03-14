@@ -18,6 +18,7 @@ from lobby import (
 
 @pytest.mark.usefixtures("egor_connected", "yura_connected")
 async def test_start_game_transit_to_turns(
+    lobby: Lobby,
     egor: Player,
     yura: Player,
     lobby_settings: LobbySettings,
@@ -74,12 +75,10 @@ async def test_transit_judgement_to_finished(
     assert isinstance(lobby.state, Finished)
 
 
+@pytest.mark.usefixtures("egor_connected", "anton_connected", "game_started")
 async def test_transit_finished_to_turns(
-    lobby: Lobby,
-    egor: Player,
-    anton: Player,
+    lobby: Lobby, egor: Player, anton: Player
 ) -> None:
-    lobby.add_player(anton)
     lobby.transit_to(Finished(anton, lobby.setups.get_card()))
     punchline_card = lobby.punchlines.get_card()
     lobby.table.append(CardOnTable(punchline_card, anton))
@@ -88,5 +87,5 @@ async def test_transit_finished_to_turns(
     egor.continue_game()
 
     assert isinstance(lobby.state, Turns)
-    assert lobby.lead == anton
+    assert lobby.lead is anton
     assert lobby.state.setup == next_setup_card
