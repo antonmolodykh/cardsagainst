@@ -133,6 +133,32 @@ class Player:
     def add_punchline_card(self, card: PunchlineCard):
         self.hand.append(card)
 
+    def start_game(
+        self,
+        settings: LobbySettings,
+        setups: Deck[SetupCard],
+        punchlines: Deck[PunchlineCard],
+    ) -> None:
+        self.lobby.state.start_game(
+            player=self,
+            lobby_settings=settings,
+            setups=setups,
+            punchlines=punchlines,
+        )
+
+    def make_turn(self, card: PunchlineCard) -> CardOnTable:
+        self.lobby.state.make_turn(self, card)
+        return self.lobby.get_card_from_table(card)
+
+    def open_table_card(self, card_on_table: CardOnTable) -> None:
+        self.lobby.state.open_table_card(self, card_on_table)
+
+    def pick_turn_winner(self, card: PunchlineCard) -> None:
+        self.lobby.state.pick_turn_winner(self, card)
+
+    def continue_game(self) -> None:
+        self.lobby.state.continue_game(self)
+
     def __repr__(self) -> str:
         return f"Player({self.profile.name})"
 
@@ -196,7 +222,7 @@ class State:
             f"method `choose_punchline_card` not expected in state {type(self).__name__}"
         )
 
-    def open_punchline_card(self, player: Player, card_on_table: CardOnTable) -> None:
+    def open_table_card(self, player: Player, card_on_table: CardOnTable) -> None:
         raise Exception(
             f"method `open_punchline_card` not expected in state {type(self).__name__}"
         )
@@ -306,7 +332,7 @@ class Judgement(State):
         # self.lobby.transit_to(Voting(self.setup))
         raise NotImplemented
 
-    def open_punchline_card(self, player: Player, card_on_table: CardOnTable) -> None:
+    def open_table_card(self, player: Player, card_on_table: CardOnTable) -> None:
         if self.lobby.lead is not player:
             raise PlayerNotLeadError
 
@@ -393,7 +419,7 @@ class Finished(State):
             pl.score = 0
 
         self.lobby.transit_to(Gathering())
-        self.lobby.state.start_game(player, lobby_settings, setups, punchlines)
+        player.start_game(lobby_settings, setups, punchlines)
 
 
 class Lobby:
@@ -536,6 +562,7 @@ class Lobby:
             raise GameAlreadyStartedError
 
         self.players.append(player)
+        player.lobby = self
 
         for pl in self.all_players:
             pl.observer.player_joined(player)

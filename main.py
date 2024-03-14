@@ -516,15 +516,14 @@ def is_card_picked(lobby: Lobby, card_on_table):
 
 
 async def handle_event(
-    lobby: Lobby, json_data: dict, player, cards_dao: CardsDAO
+    lobby: Lobby, json_data: dict, player: Player, cards_dao: CardsDAO
 ) -> None:
     match json_data["type"]:
         # TODO: Вынести эти методы в плеера, тогда это можно перетащить в remote player
         case "startGame":
             event = Event[StartGameData].model_validate(json_data)
-            lobby.state.start_game(
-                player=player,
-                lobby_settings=LobbySettings(
+            player.start_game(
+                settings=LobbySettings(
                     turn_duration=event.data.turn_duration,
                     winning_score=event.data.winning_score or config.winning_score,
                 ),
@@ -538,19 +537,19 @@ async def handle_event(
             except KeyError:
                 print("unknown card")
                 return
-            lobby.state.make_turn(player, card)
+            player.make_turn(card)
         case "openTableCard":
             event = Event[OpenTableCardData].model_validate(json_data)
-            lobby.state.open_punchline_card(player, lobby.table[event.data.index])
+            player.open_table_card(lobby.table[event.data.index])
         case "pickTurnWinner":
             event = Event[PickTurnWinnerData].model_validate(json_data)
             try:
                 card = lobby.punchlines.get_card_by_uuid(int(event.data.id))
             except KeyError:
                 return
-            lobby.state.pick_turn_winner(player, card)
+            player.pick_turn_winner(card)
         case "continueGame":
-            lobby.state.continue_game(player)
+            player.continue_game()
 
 
 @app.get("/changelog")

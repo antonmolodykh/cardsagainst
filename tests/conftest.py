@@ -54,6 +54,7 @@ def punchline_deck(punchline_deck_size: int) -> Deck[PunchlineCard]:
 
 @pytest.fixture
 def observer() -> Mock:
+    # TODO: Переименовать в `Outbox`
     return Mock(LobbyObserver)
 
 
@@ -152,9 +153,4 @@ async def game_started(
     punchline_deck: Deck[PunchlineCard],
     lobby_settings: LobbySettings,
 ) -> None:
-    lobby.state.start_game(
-        egor,
-        lobby_settings,
-        setup_deck,
-        punchline_deck,
-    )
+    egor.start_game(lobby_settings, setup_deck, punchline_deck)
