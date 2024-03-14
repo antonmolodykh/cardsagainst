@@ -14,12 +14,13 @@ default_async_timeout = 120
 
 [tool.poetry.dependencies]
 python = "^3.11"
-fastapi = "^0.103.1"
-pydantic = "^2.4.2"
+fastapi = "^0.110.0"
+pydantic = "^2.6.4"
+# TODO: Перейти на ruff
 black = "^23.10.0"
-uvicorn = "^0.23.2"
+uvicorn = "^0.28.0"
 websockets = "^12.0"
-sqlalchemy = "^2.0.23"
+sqlalchemy = "^2.0.28"
 asyncpg = "^0.29.0"
 dynaconf = "^3.2.4"
 
