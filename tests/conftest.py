@@ -38,7 +38,6 @@ def setup_deck(setup_deck_size: int) -> Deck[SetupCard]:
 
 @pytest.fixture
 def punchline_deck_size() -> int:
-    # TODO: I want to control the "hand size"
     return 100
 
 
@@ -53,8 +52,7 @@ def punchline_deck(punchline_deck_size: int) -> Deck[PunchlineCard]:
 
 
 @pytest.fixture
-def observer() -> Mock:
-    # TODO: Переименовать в `Outbox`
+def outbox() -> Mock:
     return Mock(LobbyObserver)
 
 
@@ -93,7 +91,7 @@ def lobby(  # TODO: Переименовать в лобби егора, что�
     egor: Player,
     setup_deck: Deck[SetupCard],
     punchline_deck: Deck[PunchlineCard],
-    observer: Mock,
+    outbox: Mock,
     state_gathering: Gathering,
     lobby_settings: LobbySettings,
 ) -> Lobby:
@@ -101,8 +99,8 @@ def lobby(  # TODO: Переименовать в лобби егора, что�
         settings=lobby_settings,
         owner=egor,
         state=state_gathering,
-        # TODO: state gathering determines the setups and punchlines
-        # Move?
+        # TODO: Колода определяется в момент начала игры.
+        #   Можно не инициализировать это при создании лобби
         setups=setup_deck,
         punchlines=punchline_deck,
     )
@@ -114,12 +112,10 @@ def egor_joined(lobby: Lobby, egor: Player) -> None:
 
 
 @pytest.fixture
-def egor_connected(
-    egor_joined: None, lobby: Lobby, egor: Player, observer: Mock
-) -> None:
+def egor_connected(egor_joined: None, lobby: Lobby, egor: Player, outbox: Mock) -> None:
     player_mock = Mock(LobbyObserver)
     lobby.connect(egor, player_mock)
-    observer.attach_mock(player_mock, "egor")
+    outbox.attach_mock(player_mock, "egor")
 
 
 @pytest.fixture
@@ -129,11 +125,11 @@ def anton_joined(lobby: Lobby, anton: Player) -> None:
 
 @pytest.fixture
 def anton_connected(
-    anton_joined: None, lobby: Lobby, anton: Player, observer: Mock
+    anton_joined: None, lobby: Lobby, anton: Player, outbox: Mock
 ) -> None:
     player_mock = Mock(LobbyObserver)
     lobby.connect(anton, player_mock)
-    observer.attach_mock(player_mock, "anton")
+    outbox.attach_mock(player_mock, "anton")
 
 
 @pytest.fixture
@@ -142,12 +138,10 @@ def yura_joined(lobby: Lobby, yura: Player) -> None:
 
 
 @pytest.fixture
-def yura_connected(
-    yura_joined: None, lobby: Lobby, yura: Player, observer: Mock
-) -> None:
+def yura_connected(yura_joined: None, lobby: Lobby, yura: Player, outbox: Mock) -> None:
     player_mock = Mock(LobbyObserver)
     lobby.connect(yura, player_mock)
-    observer.attach_mock(player_mock, "yura")
+    outbox.attach_mock(player_mock, "yura")
 
 
 @pytest.fixture
