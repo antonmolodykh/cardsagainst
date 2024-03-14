@@ -209,7 +209,7 @@ class LobbySettings(BaseModel):
 class State:
     lobby: Lobby
 
-    def handle_player_removal(self):
+    def remove_player(self, player: Player) -> None:
         pass
 
     def make_turn(self, player: Player, card: PunchlineCard) -> None:
@@ -271,7 +271,7 @@ class Turns(State):
         self.setup = setup
         self.timer = timer
 
-    def handle_player_removal(self):
+    def remove_player(self, player: Player) -> None:
         self.try_end_turn()
 
     def make_turn(self, player: Player, card: PunchlineCard) -> None:
@@ -319,8 +319,8 @@ class Judgement(State):
         self.setup = setup
         self.winner = None
 
-    def handle_player_removal(self):
-        if self.lobby.lead is None:
+    def remove_player(self, player: Player) -> None:
+        if player is self.lobby.lead:
             self.start_voting()
 
     def start_voting(self):
@@ -563,7 +563,7 @@ class Lobby:
         for pl in self.all_players:
             pl.observer.player_joined(player)
 
-    def remove_player(self, player: Player):
+    def remove_player(self, player: Player) -> None:
         if player is self.lead:
             self.lead = None
             # TODO: Обрабатывать переход на голосование / смену лида
@@ -592,4 +592,4 @@ class Lobby:
         for pl in self.all_players_except(player):
             pl.observer.player_left(player)
         print(f"Removed. self.lead={self.lead}, self.players={self.players}")
-        self.state.handle_player_removal()
+        self.state.remove_player(player)
