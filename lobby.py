@@ -122,6 +122,7 @@ class Player:
         self.observer = LobbyObserver()
 
     def connect(self, observer: LobbyObserver) -> None:
+        self.lobby.connect(self)
         self.is_connected = True
         self.observer = observer
         observer.welcome()
@@ -129,6 +130,7 @@ class Player:
     def disconnect(self) -> None:
         self.observer = LobbyObserver()
         self.is_connected = False
+        self.lobby.disconnect(self)
 
     def add_punchline_card(self, card: PunchlineCard):
         self.hand.append(card)
@@ -530,7 +532,7 @@ class Lobby:
                 return card_on_table
         raise NotImplemented
 
-    def connect(self, player: Player, observer: LobbyObserver) -> None:
+    def connect(self, player: Player) -> None:
         if player not in self.all_players:
             if player not in self.grave:
                 raise UnknownPlayerError()
@@ -543,14 +545,10 @@ class Lobby:
             for pl in self.all_players:
                 pl.observer.player_joined(player)
 
-        player.connect(observer)
-
         for pl in self.all_players_except(player):
             pl.observer.player_connected(player)
 
     def disconnect(self, player: Player) -> None:
-        player.disconnect()
-
         for pl in self.all_players_except(player):
             pl.observer.player_disconnected(player)
 

@@ -491,7 +491,7 @@ async def websocket_endpoint(
     try:
         player = player_by_token[player_token]
         remote_player = RemotePlayer(websocket=websocket, lobby=lobby, player=player)
-        lobby.connect(player, remote_player)
+        player.connect(remote_player)
     except (KeyError, UnknownPlayerError):
         await websocket.send_json(
             {"type": "error", "data": {"status": 404, "message": "Player not found"}}
@@ -512,7 +512,7 @@ async def websocket_endpoint(
             await remote_player.handle_event(json_data, cards_dao=cards_dao)
         except WebSocketDisconnect:
             send_events_task.cancel()
-            lobby.disconnect(player)
+            player.disconnect()
             print("before remove")
             remove_player_tasks[player_token] = asyncio.create_task(
                 run_remove_player(lobby, player, lobby_token, player_token)

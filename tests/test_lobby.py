@@ -132,7 +132,7 @@ def test_add_player(lobby: Lobby, yura: Player, outbox: Mock) -> None:
 def test_connect_player(lobby: Lobby, yura: Player, outbox: Mock) -> None:
     player_mock = Mock(LobbyObserver)
     outbox.attach_mock(player_mock, "yura")
-    lobby.connect(yura, player_mock)
+    yura.connect(player_mock)
 
     expected_events = [
         call.egor.player_connected(yura),
@@ -143,7 +143,7 @@ def test_connect_player(lobby: Lobby, yura: Player, outbox: Mock) -> None:
 
 @pytest.mark.usefixtures("egor_connected", "yura_connected")
 def test_disconnect_player(lobby: Lobby, yura: Player, outbox: Mock) -> None:
-    lobby.disconnect(yura)
+    yura.disconnect()
 
     expected_events = [
         call.egor.player_disconnected(yura),
@@ -357,7 +357,7 @@ async def test_all_players_removed(lobby: Lobby, egor: Player, yura: Player) -> 
 async def test_owner_removed(
     lobby: Lobby, egor: Player, yura: Player, outbox: Mock
 ) -> None:
-    lobby.disconnect(egor)
+    egor.disconnect()
     assert lobby.owner is egor
     lobby.remove_player(egor)
     assert lobby.owner is yura
@@ -371,13 +371,13 @@ async def test_owner_removed(
 async def test_resurrect(
     lobby: Lobby, egor: Player, yura: Player, outbox: Mock
 ) -> None:
-    lobby.disconnect(yura)
+    yura.disconnect()
     assert yura in lobby.all_players
     lobby.remove_player(yura)
     assert yura not in lobby.all_players
     assert yura in lobby.grave
 
-    lobby.connect(yura, outbox.yura)
+    yura.connect(outbox.yura)
 
     expected_events = [
         call.yura.welcome(),
