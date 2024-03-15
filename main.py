@@ -542,6 +542,7 @@ async def changelog(
     async_session: SessionDependency,
     version: Annotated[str | None, Query(alias="version")] = None,
 ):
+    # :)
     async with async_session() as session:
         query = select(Changelog.version).order_by(Changelog.id.desc()).limit(1)
         result = await session.execute(query)
