@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import datetime
 import traceback
 from asyncio import Task
 from enum import StrEnum
@@ -71,6 +72,7 @@ def get_player_data_from_player(player: Player) -> PlayerData:
 class ChangelogData(ApiModel):
     version: str
     text: str
+    date: datetime.date
 
 
 class ChangelogResponse(ApiModel):
@@ -563,7 +565,7 @@ async def changelog(
     )
     subquery = subquery_clause.subquery()
 
-    query = select(Changelog.version, Changelog.text).where(
+    query = select(Changelog.version, Changelog.text, Changelog.date).where(
         Changelog.id > subquery.c.id
     )
 
@@ -573,7 +575,8 @@ async def changelog(
 
     return ChangelogResponse(
         changelog=[
-            ChangelogData(version=record[0], text=record[1]) for record in records
+            ChangelogData(version=record[0], text=record[1], date=record[2])
+            for record in records
         ],
         current_version=current_version,
     )

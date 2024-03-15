@@ -24,10 +24,6 @@ class PlayerNotOwnerError(Exception):
     pass
 
 
-class GameAlreadyStartedError(Exception):
-    pass
-
-
 class NotAllCardsOpenedError(Exception):
     pass
 
@@ -302,6 +298,7 @@ class Turns(State):
             self.lobby.transit_to(Judgement(self.setup))
         else:
             # self.lobby.transit_to(Voting(self.setup))
+            # TODO: make turn, return table
             raise NotImplemented
 
     def choose_punchline_card(self, player: Player, card: PunchlineCard) -> None:
@@ -328,6 +325,7 @@ class Judgement(State):
 
     def start_voting(self):
         # self.lobby.transit_to(Voting(self.setup))
+        # TODO: make turn, dump table
         raise NotImplemented
 
     def open_table_card(self, player: Player, card_on_table: CardOnTable) -> None:
@@ -553,9 +551,6 @@ class Lobby:
             pl.observer.player_disconnected(player)
 
     def add_player(self, player: Player):
-        if not isinstance(self.state, Gathering):
-            raise GameAlreadyStartedError
-
         self.players.append(player)
         player.lobby = self
 
