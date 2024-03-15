@@ -258,7 +258,7 @@ class Gathering(State):
 
         self.lobby.settings = lobby_settings
         for pl in self.lobby.all_players:
-            for _ in range(self.lobby.HAND_SIZE):
+            while len(pl.hand) < self.lobby.HAND_SIZE:
                 pl.add_punchline_card(self.lobby.punchlines.get_card())
             pl.observer.game_started(pl)
 
@@ -548,9 +548,6 @@ class Lobby:
     def add_player(self, player: Player):
         self.players.append(player)
         player.lobby = self
-
-        while len(player.hand) < self.HAND_SIZE:
-            player.add_punchline_card(self.punchlines.get_card())
 
         for pl in self.all_players:
             pl.observer.player_joined(player)
