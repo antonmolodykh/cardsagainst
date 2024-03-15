@@ -21,4 +21,4 @@ jobs:
           git pull;
           docker compose down;
           docker compose up --build -d;
-          docker system prune --all --force;
+          docker system prune --all --force
