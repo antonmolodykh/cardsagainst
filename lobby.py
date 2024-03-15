@@ -538,6 +538,10 @@ class Lobby:
             self.grave.remove(player)
             self.add_player(player)
 
+            if not isinstance(self.state, Gathering):
+                while len(player.hand) < self.HAND_SIZE:
+                    player.add_punchline_card(self.punchlines.get_card())
+
         for pl in self.all_players_except(player):
             pl.observer.player_connected(player)
 
@@ -548,9 +552,6 @@ class Lobby:
     def add_player(self, player: Player):
         self.players.append(player)
         player.lobby = self
-
-        while len(player.hand) < self.HAND_SIZE:
-            player.add_punchline_card(self.punchlines.get_card())
 
         for pl in self.all_players:
             pl.observer.player_joined(player)
