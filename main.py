@@ -22,7 +22,6 @@ from dao import CardsDAO
 from dependencies import CardsDAODependency, lifespan, SessionDependency
 from lobby import (
     CardOnTable,
-    GameAlreadyStartedError,
     Gathering,
     Judgement,
     Lobby,
@@ -457,10 +456,7 @@ async def connect(
         lobbies[lobby_token] = lobby
         print(f"Lobby created. lobbies={lobbies}")
 
-    try:
-        lobby.add_player(player)
-    except GameAlreadyStartedError:
-        raise HTTPException(status_code=403)
+    lobby.add_player(player)
 
     player_by_token[player.token] = player
     remove_player_tasks[player.token] = asyncio.create_task(
