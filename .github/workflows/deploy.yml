@@ -3,46 +3,22 @@ on:
   push:
     branches: ["main"]
 
-
 jobs:
   deploy:
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
     steps:
-      - name: Configure SSH
-        run: |
-          mkdir -p ~/.ssh/
-          echo "$SSH_PRIVATE_KEY" > ~/.ssh/staging.key
-          chmod 600 ~/.ssh/staging.key
-          cat >>~/.ssh/config <<END
-          Host staging
-            HostName $SSH_HOST
-            User $SSH_USER
-            IdentityFile ~/.ssh/staging.key
-            StrictHostKeyChecking no
-          END
-        env:
-          SSH_USER: ${{ secrets.SSH_USER }}
-          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-          SSH_HOST: ${{ secrets.SSH_HOST }}
-
-      - name: working directory
-        run: ssh staging 'cd 420cards-backend'
-
-      - name: Check out the source
-        run: ssh staging 'git checkout main'
-
-      - name: pull
-        run: ssh staging 'git pull'
-
-      - name: shut down application
-        run: ssh staging 'docker compose down'
-
-      - name: start application
-        run: ssh staging 'docker compose up -d'
-
-      - name: clear docker cache
-        run: ssh staging 'docker system prune --all --force'
-
- 
-            
+    - name: Deploy
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SSH_HOST }}
+        username: ${{ secrets.SSH_USER }}
+        password: ${{ secrets.SSH_PASSWORD }}
+        port: 22
+        script: |
+          cd 420cards-backend;
+          git checkout main;
+          git pull;
+          docker compose down;
+          docker compose up -d;
+          docker system prune --all --force
