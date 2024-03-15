@@ -122,6 +122,7 @@ class Player:
         self.observer = LobbyObserver()
 
     def connect(self, observer: LobbyObserver) -> None:
+        self.lobby.connect(self)
         self.is_connected = True
         self.observer = observer
         observer.welcome()
@@ -129,9 +130,36 @@ class Player:
     def disconnect(self) -> None:
         self.observer = LobbyObserver()
         self.is_connected = False
+        self.lobby.disconnect(self)
 
     def add_punchline_card(self, card: PunchlineCard):
         self.hand.append(card)
+
+    def start_game(
+        self,
+        settings: LobbySettings,
+        setups: Deck[SetupCard],
+        punchlines: Deck[PunchlineCard],
+    ) -> None:
+        self.lobby.state.start_game(
+            player=self,
+            lobby_settings=settings,
+            setups=setups,
+            punchlines=punchlines,
+        )
+
+    def make_turn(self, card: PunchlineCard) -> CardOnTable:
+        self.lobby.state.make_turn(self, card)
+        return self.lobby.get_card_from_table(card)
+
+    def open_table_card(self, card_on_table: CardOnTable) -> None:
+        self.lobby.state.open_table_card(self, card_on_table)
+
+    def pick_turn_winner(self, card: PunchlineCard) -> None:
+        self.lobby.state.pick_turn_winner(self, card)
+
+    def continue_game(self) -> None:
+        self.lobby.state.continue_game(self)
 
     def __repr__(self) -> str:
         return f"Player({self.profile.name})"
@@ -178,12 +206,13 @@ class LobbySettings(BaseModel):
     turn_duration: int | None = None
     winning_score: int
     finish_delay: int = 5
+    start_turn_delay: int = 5
 
 
 class State:
     lobby: Lobby
 
-    def handle_player_removal(self):
+    def remove_player(self, player: Player) -> None:
         pass
 
     def make_turn(self, player: Player, card: PunchlineCard) -> None:
@@ -191,12 +220,7 @@ class State:
             f"method `make_turn` not expected in state {type(self).__name__}"
         )
 
-    def choose_punchline_card(self, player: Player, card: PunchlineCard):
-        raise Exception(
-            f"method `choose_punchline_card` not expected in state {type(self).__name__}"
-        )
-
-    def open_punchline_card(self, player: Player, card_on_table: CardOnTable) -> None:
+    def open_table_card(self, player: Player, card_on_table: CardOnTable) -> None:
         raise Exception(
             f"method `open_punchline_card` not expected in state {type(self).__name__}"
         )
@@ -250,7 +274,7 @@ class Turns(State):
         self.setup = setup
         self.timer = timer
 
-    def handle_player_removal(self):
+    def remove_player(self, player: Player) -> None:
         self.try_end_turn()
 
     def make_turn(self, player: Player, card: PunchlineCard) -> None:
@@ -298,15 +322,15 @@ class Judgement(State):
         self.setup = setup
         self.winner = None
 
-    def handle_player_removal(self):
-        if self.lobby.lead is None:
+    def remove_player(self, player: Player) -> None:
+        if player is self.lobby.lead:
             self.start_voting()
 
     def start_voting(self):
         # self.lobby.transit_to(Voting(self.setup))
         raise NotImplemented
 
-    def open_punchline_card(self, player: Player, card_on_table: CardOnTable) -> None:
+    def open_table_card(self, player: Player, card_on_table: CardOnTable) -> None:
         if self.lobby.lead is not player:
             raise PlayerNotLeadError
 
@@ -346,7 +370,7 @@ class Judgement(State):
                     return
 
         async def start_turn():
-            await asyncio.sleep(5)
+            await asyncio.sleep(self.lobby.settings.start_turn_delay)
             self.start_turn()
 
         asyncio.create_task(start_turn())
@@ -393,7 +417,7 @@ class Finished(State):
             pl.score = 0
 
         self.lobby.transit_to(Gathering())
-        self.lobby.state.start_game(player, lobby_settings, setups, punchlines)
+        player.start_game(lobby_settings, setups, punchlines)
 
 
 class Lobby:
@@ -449,7 +473,8 @@ class Lobby:
         return None
 
     def change_owner(self) -> None:
-        self.owner = None
+        # TODO: Что делать, если не осталось игроков?
+        self.owner = None  # это поле не nullable
         for player in self.all_players:
             if player.is_connected:
                 self.owner = player
@@ -507,7 +532,7 @@ class Lobby:
                 return card_on_table
         raise NotImplemented
 
-    def connect(self, player: Player, observer: LobbyObserver) -> None:
+    def connect(self, player: Player) -> None:
         if player not in self.all_players:
             if player not in self.grave:
                 raise UnknownPlayerError()
@@ -520,14 +545,10 @@ class Lobby:
             for pl in self.all_players:
                 pl.observer.player_joined(player)
 
-        player.connect(observer)
-
         for pl in self.all_players_except(player):
             pl.observer.player_connected(player)
 
     def disconnect(self, player: Player) -> None:
-        player.disconnect()
-
         for pl in self.all_players_except(player):
             pl.observer.player_disconnected(player)
 
@@ -536,11 +557,12 @@ class Lobby:
             raise GameAlreadyStartedError
 
         self.players.append(player)
+        player.lobby = self
 
         for pl in self.all_players:
             pl.observer.player_joined(player)
 
-    def remove_player(self, player: Player):
+    def remove_player(self, player: Player) -> None:
         if player is self.lead:
             self.lead = None
             # TODO: Обрабатывать переход на голосование / смену лида
@@ -569,4 +591,4 @@ class Lobby:
         for pl in self.all_players_except(player):
             pl.observer.player_left(player)
         print(f"Removed. self.lead={self.lead}, self.players={self.players}")
-        self.state.handle_player_removal()
+        self.state.remove_player(player)
