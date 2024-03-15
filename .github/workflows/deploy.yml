@@ -7,6 +7,8 @@ jobs:
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/prod'
     steps:
+      - name: asdasd
+        uses: actions/checkout@v4.1.2
       - name: Run command on remote server
         uses: D3rHase/ssh-command-action@v0.2.2
         with:
