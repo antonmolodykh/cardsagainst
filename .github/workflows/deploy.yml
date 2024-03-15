@@ -7,20 +7,20 @@ jobs:
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/prod'
     steps:
-      - name: asdasd
-        uses: actions/checkout@v4.1.2
-      - name: Run command on remote server
-        uses: D3rHase/ssh-command-action@v0.2.2
+      - name: Execute remote script
+        uses: appleboy/ssh-action@v1.0.3
         with:
-          host: ${{secrets.SSH_HOST}}
-          port: 22
-          user: ${{secrets.SSH_USER}}
-          private_key: ${{secrets.SSH_PRIVATE_KEY}}
-          command: |
-            cd 420cards-backend/;
-            git checkout main;
-            git pull;
-            docker compose down;
-            docker compose up -d;
-            docker system prune --all --force
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          password: ${{ secrets.SSH_PASSWORD }}
+          port: ${{ secrets.SSH_PORT }}
+          script: |
+              cd 420cards-backend/;
+              git checkout main;
+              git pull;
+              docker compose down;
+              docker compose up -d;
+              docker system prune --all --force
+
+ 
             
