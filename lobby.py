@@ -536,12 +536,7 @@ class Lobby:
                 raise UnknownPlayerError()
 
             self.grave.remove(player)
-
-            # TODO: Можно использовать lobby.add_player, если
-            #   разрешим присоединяться во время игры
-            self.players.append(player)
-            for pl in self.all_players:
-                pl.observer.player_joined(player)
+            self.add_player(player)
 
         for pl in self.all_players_except(player):
             pl.observer.player_connected(player)
