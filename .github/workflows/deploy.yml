@@ -6,7 +6,7 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/prod'
-    steps:
+    steps: 
       - name: Execute remote script
         uses: appleboy/ssh-action@v1.0.3
         with:
