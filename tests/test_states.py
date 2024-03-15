@@ -25,7 +25,7 @@ async def test_start_game_transit_to_turns(
     setup_deck: Deck[SetupCard],
     punchline_deck: Deck[PunchlineCard],
 ) -> None:
-    lobby.state.start_game(egor, lobby_settings, setup_deck, punchline_deck)
+    egor.start_game(lobby_settings, setup_deck, punchline_deck)
     isinstance(lobby.state, Turns)
 
 
@@ -38,7 +38,7 @@ async def test_transit_turns_to_judgement(
 ) -> None:
     assert isinstance(lobby.state, Turns)
     setup_card = lobby.state.setup
-    lobby.state.make_turn(anton, anton.hand[0])
+    anton.make_turn(anton.hand[0])
     await asyncio.sleep(0.01)
     assert isinstance(lobby.state, Judgement)
     assert lobby.state.setup is setup_card
@@ -67,27 +67,25 @@ async def test_transit_judgement_to_finished(
     punchline_deck: Deck[PunchlineCard],
     setup_deck: Deck[SetupCard],
 ) -> None:
-    lobby.state.make_turn(anton, anton.hand[0])
+    anton.make_turn(anton.hand[0])
     card_on_table = lobby.table[0]
-    lobby.state.open_punchline_card(egor, card_on_table)
-    lobby.state.pick_turn_winner(egor, card_on_table.card)
+    egor.open_table_card(card_on_table)
+    egor.pick_turn_winner(card_on_table.card)
     await asyncio.sleep(0.01)
     assert isinstance(lobby.state, Finished)
 
 
+@pytest.mark.usefixtures("egor_connected", "anton_connected", "game_started")
 async def test_transit_finished_to_turns(
-    lobby: Lobby,
-    egor: Player,
-    anton: Player,
+    lobby: Lobby, egor: Player, anton: Player
 ) -> None:
-    lobby.add_player(anton)
     lobby.transit_to(Finished(anton, lobby.setups.get_card()))
     punchline_card = lobby.punchlines.get_card()
     lobby.table.append(CardOnTable(punchline_card, anton))
     next_setup_card = lobby.setups.cards[-1]
 
-    lobby.state.continue_game(egor)
+    egor.continue_game()
 
     assert isinstance(lobby.state, Turns)
-    assert lobby.lead == anton
+    assert lobby.lead is anton
     assert lobby.state.setup == next_setup_card

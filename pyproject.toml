@@ -2,27 +2,27 @@
 name = "projects"
 version = "0.1.0"
 description = ""
-authors = ["amolodykh <antonmolodykh96@gmail.com>"]
+authors = [
+    "amolodykh <antonmolodykh96@gmail.com>",
+    "Yuriy Kehter <yuriy.kehter+420cards@gmail.com>"
+]
 readme = "README.md"
-
-[tool.pytest.ini_options]
-filterwarnings = ["ignore::DeprecationWarning:urllib3.*"]
-default_async_timeout = 120
 
 [tool.poetry.dependencies]
 python = "^3.11"
-fastapi = "^0.103.1"
-pydantic = "^2.4.2"
-black = "^23.10.0"
-uvicorn = "^0.23.2"
+fastapi = "^0.110.0"
+pydantic = "^2.6.4"
+uvicorn = "^0.28.0"
 websockets = "^12.0"
-sqlalchemy = "^2.0.23"
+sqlalchemy = "^2.0.28"
 asyncpg = "^0.29.0"
 dynaconf = "^3.2.4"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.4.2"
 alt-pytest-asyncio = ">=0.7.1,^0"
+# TODO: Перейти на ruff
+black = "^23.10.0"
 
 [build-system]
 requires = ["poetry-core"]

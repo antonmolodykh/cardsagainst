@@ -68,15 +68,6 @@ def get_player_data_from_player(player: Player) -> PlayerData:
     )
 
 
-# TODO: зачем оно здесь?
-queue = asyncio.Queue()
-
-
-async def send_messages():
-    while True:
-        event = await queue.get()
-
-
 class ChangelogData(ApiModel):
     version: str
     text: str
@@ -292,12 +283,45 @@ class RemotePlayer(LobbyObserver):
             )
         )
 
-    async def send_messages(self):
+    async def send_events(self):
         while True:
             event = await self._queue.get()
             data = event.model_dump(by_alias=True)
             print(f"Event: {data}")
             await self.websocket.send_json(data)
+
+    async def handle_event(self, json_data: dict, cards_dao: CardsDAO) -> None:
+        match json_data["type"]:
+            case "startGame":
+                event = Event[StartGameData].model_validate(json_data)
+                self.player.start_game(
+                    settings=LobbySettings(
+                        turn_duration=event.data.turn_duration,
+                        winning_score=event.data.winning_score or config.winning_score,
+                    ),
+                    setups=await cards_dao.get_setups(deck_id="one"),
+                    punchlines=await cards_dao.get_punchlines(deck_id="one"),
+                )
+            case "makeTurn":
+                event = Event[MakeTurnData].model_validate(json_data)
+                try:
+                    card = self.lobby.punchlines.get_card_by_uuid(int(event.data.id))
+                except KeyError:
+                    print("unknown card")
+                    return
+                self.player.make_turn(card)
+            case "openTableCard":
+                event = Event[OpenTableCardData].model_validate(json_data)
+                self.player.open_table_card(self.lobby.table[event.data.index])
+            case "pickTurnWinner":
+                event = Event[PickTurnWinnerData].model_validate(json_data)
+                try:
+                    card = self.lobby.punchlines.get_card_by_uuid(int(event.data.id))
+                except KeyError:
+                    return
+                self.player.pick_turn_winner(card)
+            case "continueGame":
+                self.player.continue_game()
 
 
 class ConnectRequest(BaseModel):
@@ -467,7 +491,7 @@ async def websocket_endpoint(
     try:
         player = player_by_token[player_token]
         remote_player = RemotePlayer(websocket=websocket, lobby=lobby, player=player)
-        lobby.connect(player, remote_player)
+        player.connect(remote_player)
     except (KeyError, UnknownPlayerError):
         await websocket.send_json(
             {"type": "error", "data": {"status": 404, "message": "Player not found"}}
@@ -479,16 +503,16 @@ async def websocket_endpoint(
         task = remove_player_tasks.pop(player_token)
         task.cancel()
 
-    send_messages_task = asyncio.create_task(remote_player.send_messages())
+    send_events_task = asyncio.create_task(remote_player.send_events())
 
     while True:
         try:
             json_data = await websocket.receive_json()
             print(f"Received event: {json_data}")
-            await handle_event(lobby, json_data, player, cards_dao=cards_dao)
+            await remote_player.handle_event(json_data, cards_dao=cards_dao)
         except WebSocketDisconnect:
-            send_messages_task.cancel()
-            lobby.disconnect(player)
+            send_events_task.cancel()
+            player.disconnect()
             print("before remove")
             remove_player_tasks[player_token] = asyncio.create_task(
                 run_remove_player(lobby, player, lobby_token, player_token)
@@ -513,44 +537,6 @@ def is_card_picked(lobby: Lobby, card_on_table):
         if isinstance(lobby.state, Judgement)
         else False
     )
-
-
-async def handle_event(
-    lobby: Lobby, json_data: dict, player, cards_dao: CardsDAO
-) -> None:
-    match json_data["type"]:
-        # TODO: Вынести эти методы в плеера, тогда это можно перетащить в remote player
-        case "startGame":
-            event = Event[StartGameData].model_validate(json_data)
-            lobby.state.start_game(
-                player=player,
-                lobby_settings=LobbySettings(
-                    turn_duration=event.data.turn_duration,
-                    winning_score=event.data.winning_score or config.winning_score,
-                ),
-                setups=await cards_dao.get_setups(deck_id="one"),
-                punchlines=await cards_dao.get_punchlines(deck_id="one"),
-            )
-        case "makeTurn":
-            event = Event[MakeTurnData].model_validate(json_data)
-            try:
-                card = lobby.punchlines.get_card_by_uuid(int(event.data.id))
-            except KeyError:
-                print("unknown card")
-                return
-            lobby.state.make_turn(player, card)
-        case "openTableCard":
-            event = Event[OpenTableCardData].model_validate(json_data)
-            lobby.state.open_punchline_card(player, lobby.table[event.data.index])
-        case "pickTurnWinner":
-            event = Event[PickTurnWinnerData].model_validate(json_data)
-            try:
-                card = lobby.punchlines.get_card_by_uuid(int(event.data.id))
-            except KeyError:
-                return
-            lobby.state.pick_turn_winner(player, card)
-        case "continueGame":
-            lobby.state.continue_game(player)
 
 
 @app.get("/changelog")
