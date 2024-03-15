@@ -575,7 +575,8 @@ async def changelog(
 
     return ChangelogResponse(
         changelog=[
-            ChangelogData(version=record[0], text=record[1], date=record[2]) for record in records
+            ChangelogData(version=record[0], text=record[1], date=record[2])
+            for record in records
         ],
         current_version=current_version,
     )

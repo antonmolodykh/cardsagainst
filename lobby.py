@@ -24,10 +24,6 @@ class PlayerNotOwnerError(Exception):
     pass
 
 
-class GameAlreadyStartedError(Exception):
-    pass
-
-
 class NotAllCardsOpenedError(Exception):
     pass
 
@@ -555,9 +551,6 @@ class Lobby:
             pl.observer.player_disconnected(player)
 
     def add_player(self, player: Player):
-        if not isinstance(self.state, Gathering):
-            raise GameAlreadyStartedError
-
         self.players.append(player)
         player.lobby = self
 
