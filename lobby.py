@@ -549,13 +549,17 @@ class Lobby:
         self.players.append(player)
         player.lobby = self
 
+        while len(player.hand) < self.HAND_SIZE:
+            player.add_punchline_card(self.punchlines.get_card())
+
         for pl in self.all_players:
             pl.observer.player_joined(player)
 
     def remove_player(self, player: Player) -> None:
         if player is self.lead:
             self.lead = None
-            # TODO: Обрабатывать переход на голосование / смену лида
+            # TODO: make turn, return table
+
         if player in self.players:
             self.players.remove(player)
 
@@ -566,9 +570,6 @@ class Lobby:
 
         self.grave.add(player)
 
-        # TODO: Кажется, не надо сбрасывать руку, если игрока похоронили
-        #   Мы можем воскресить его с теми же картами, если не началась новая игра
-        self.punchlines.dump(player.hand)
         for card_on_table in self.table:
             if card_on_table.player is player:
                 self.punchlines.dump([card_on_table.card])
