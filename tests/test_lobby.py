@@ -429,10 +429,10 @@ async def test_refresh_hand(
     prev_hand = yura.hand.copy()
     yura.refresh_hand()
     expected_events = [
-        outbox.yura.hand_refreshed(yura.hand),
-        outbox.yura.player_score_changed(yura),
-        outbox.egor.player_score_changed(yura),
-        outbox.anton.player_score_changed(yura),
+        call.yura.hand_refreshed(yura.hand),
+        call.yura.player_score_changed(yura),
+        call.egor.player_score_changed(yura),
+        call.anton.player_score_changed(yura),
     ]
     outbox.assert_has_calls(expected_events)
     assert not set(prev_hand) & set(yura.hand)
@@ -449,8 +449,8 @@ async def test_refresh_hand_decrease_score(
     yura.score = -1
     yura.refresh_hand()
     expected_events = [
-        outbox.egor.player_score_changed(yura),
-        outbox.anton.player_score_changed(yura),
+        call.egor.player_score_changed(yura),
+        call.anton.player_score_changed(yura),
     ]
     outbox.assert_has_calls(expected_events, any_order=True)
     assert yura.score == 3
