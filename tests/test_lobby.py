@@ -424,11 +424,11 @@ async def test_refresh_hand(
     lobby: Lobby, egor: Player, yura: Player, anton: Player, outbox: Mock
 ) -> None:
     prev_hand = yura.hand.copy()
-    new_hand = yura.refresh_hand()
+    yura.refresh_hand()
     expected_events = [
         outbox.yura.hand_refreshed(ANY),
         outbox.egor.player_score_changed(yura),
         outbox.anton.player_score_changed(yura),
     ]
     outbox.assert_has_calls(expected_events)
-    assert not set(prev_hand) & set(new_hand)
+    assert not set(prev_hand) & set(yura.hand)
