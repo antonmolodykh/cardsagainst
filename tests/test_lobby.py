@@ -458,7 +458,7 @@ async def test_refresh_hand_decrease_score(
 @pytest.mark.usefixtures(
     "egor_connected", "yura_connected", "anton_connected", "game_started"
 )
-async def test_refresh_hand_already_ready(
+async def test_refresh_hand_score_too_low(
     lobby: Lobby, egor: Player, yura: Player, anton: Player, outbox: Mock
 ) -> None:
     yura.score = -1
