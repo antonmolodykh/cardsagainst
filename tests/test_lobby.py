@@ -473,6 +473,7 @@ async def test_refresh_hand_score_too_low(
 async def test_refresh_hand_already_ready(
     lobby: Lobby, egor: Player, yura: Player, anton: Player, outbox: Mock
 ) -> None:
+    yura.make_turn(yura.hand[0])
     prev_hand = yura.hand.copy()
     with pytest.raises(PlayerAlreadyReadyError):
         yura.refresh_hand()
