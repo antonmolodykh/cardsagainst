@@ -18,6 +18,7 @@ from lobby import (
     SetupCard,
     Turns,
     PlayerAlreadyReadyError,
+    ScoreTooLowError,
 )
 
 
@@ -424,16 +425,18 @@ async def test_make_multiple_choice(
 async def test_refresh_hand(
     lobby: Lobby, egor: Player, yura: Player, anton: Player, outbox: Mock
 ) -> None:
+    yura.score = 0
     prev_hand = yura.hand.copy()
     yura.refresh_hand()
     expected_events = [
         outbox.yura.hand_refreshed(ANY),
+        outbox.egor.player_score_changed(yura),
+        outbox.anton.player_score_changed(yura),
     ]
     outbox.assert_has_calls(expected_events)
-    outbox.egor.player_score_changed.assert_not_called()
-    outbox.anton.player_score_changed.assert_not_called()
     assert not set(prev_hand) & set(yura.hand)
-    assert yura.score == 0
+    # TODO: Configure min score
+    assert yura.score == -1
 
 
 @pytest.mark.usefixtures(
@@ -442,7 +445,7 @@ async def test_refresh_hand(
 async def test_refresh_hand_decrease_score(
     lobby: Lobby, egor: Player, yura: Player, anton: Player, outbox: Mock
 ) -> None:
-    yura.score = 4
+    yura.score = -1
     yura.refresh_hand()
     expected_events = [
         outbox.egor.player_score_changed(yura),
@@ -450,6 +453,17 @@ async def test_refresh_hand_decrease_score(
     ]
     outbox.assert_has_calls(expected_events, any_order=True)
     assert yura.score == 3
+
+
+@pytest.mark.usefixtures(
+    "egor_connected", "yura_connected", "anton_connected", "game_started"
+)
+async def test_refresh_hand_already_ready(
+    lobby: Lobby, egor: Player, yura: Player, anton: Player, outbox: Mock
+) -> None:
+    yura.score = -1
+    with pytest.raises(ScoreTooLowError):
+        yura.refresh_hand()
 
 
 @pytest.mark.usefixtures(
