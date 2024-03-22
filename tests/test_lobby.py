@@ -432,4 +432,4 @@ async def test_refresh_hand(
     ]
     outbox.assert_has_calls(expected_events)
     (new_hand,), _ = outbox.yura.hand_refreshed.call_args
-    assert not (set(prev_hand) & set(new_hand))
+    assert not set(prev_hand) & set(new_hand)
