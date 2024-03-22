@@ -17,6 +17,7 @@ from lobby import (
     PunchlineCard,
     SetupCard,
     Turns,
+    PlayerAlreadyReadyError,
 )
 
 
@@ -432,3 +433,16 @@ async def test_refresh_hand(
     ]
     outbox.assert_has_calls(expected_events)
     assert not set(prev_hand) & set(yura.hand)
+
+
+@pytest.mark.usefixtures(
+    "egor_connected", "yura_connected", "anton_connected", "game_started"
+)
+async def test_refresh_hand_already_ready(
+    lobby: Lobby, egor: Player, yura: Player, anton: Player, outbox: Mock
+) -> None:
+    prev_hand = yura.hand.copy()
+    yura.make_turn(yura.hand[0])
+    with pytest.raises(PlayerAlreadyReadyError):
+        yura.refresh_hand()
+    assert yura.hand == prev_hand
