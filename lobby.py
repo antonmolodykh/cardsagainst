@@ -464,10 +464,10 @@ class Lobby:
     def all_players_except(self, player: Player):
         return [p for p in self.all_players if p is not player]
 
-    def get_selected_card(self, player: Player) -> PunchlineCard | None:
+    def card_on_table_of(self, player: Player) -> CardOnTable | None:
         for card_on_tabel in self.table:
             if card_on_tabel.player is player:
-                return card_on_tabel.card
+                return card_on_tabel
         return None
 
     def change_owner(self) -> None:

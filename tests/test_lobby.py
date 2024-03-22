@@ -413,5 +413,5 @@ async def test_make_multiple_choice(
     yura.make_turn(second_choice)
     anton.make_turn(anton.hand[0])
     assert isinstance(lobby.state, Judgement)
-    assert lobby.get_selected_card(yura) is second_choice
+    assert lobby.card_on_table_of(yura) is second_choice
     assert first_choice in yura.hand

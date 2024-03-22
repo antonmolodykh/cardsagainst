@@ -239,7 +239,7 @@ class RemotePlayer(LobbyObserver):
         )
 
     def welcome(self):
-        selected_card = self.lobby.get_selected_card(self.player)
+        selected_card = self.lobby.card_on_table_of(self.player)
         self._queue.put_nowait(
             Event(
                 id=1,
@@ -276,7 +276,7 @@ class RemotePlayer(LobbyObserver):
                     owner_uuid=self.lobby.owner.uuid,
                     self_uuid=self.player.uuid,
                     selected_card=(
-                        PunchlineData.from_card(selected_card)
+                        PunchlineData.from_card(selected_card.card)
                         if selected_card
                         else None
                     ),
