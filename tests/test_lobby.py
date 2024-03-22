@@ -385,3 +385,17 @@ async def test_resurrect(
         call.egor.player_connected(yura),
     ]
     outbox.assert_has_calls(expected_events, any_order=True)
+
+
+@pytest.mark.usefixtures("yura_connected", "egor_connected", "game_started")
+async def test_make_multiple_choice(
+    lobby: Lobby, egor: Player, yura: Player, anton: Player, outbox: Mock
+) -> None:
+    first_choice = yura.hand[0]
+    yura.make_turn(first_choice)
+    second_choice = yura.hand[0]
+    yura.make_turn(second_choice)
+    anton.make_turn(anton.hand[0])
+    assert isinstance(lobby.state, Judgement)
+    assert lobby.get_selected_card(yura) is second_choice
+    assert first_choice in yura.hand
