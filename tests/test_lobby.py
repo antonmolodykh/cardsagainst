@@ -434,6 +434,7 @@ async def test_refresh_hand(
         outbox.anton.player_score_changed(yura),
     ]
     outbox.assert_has_calls(expected_events)
+    outbox.yura.player_score_changed.assert_not_called()
     assert not set(prev_hand) & set(yura.hand)
     # TODO: Configure min score
     assert yura.score == -1
