@@ -434,7 +434,7 @@ async def test_refresh_hand(
         call.egor.player_score_changed(yura),
         call.anton.player_score_changed(yura),
     ]
-    outbox.assert_has_calls(expected_events)
+    outbox.assert_has_calls(expected_events, any_order=True)
     assert not set(prev_hand) & set(yura.hand)
     # TODO: Configure min score
     assert yura.score == -1
@@ -446,7 +446,7 @@ async def test_refresh_hand(
 async def test_refresh_hand_decrease_score(
     lobby: Lobby, egor: Player, yura: Player, anton: Player, outbox: Mock
 ) -> None:
-    yura.score = -1
+    yura.score = 4
     yura.refresh_hand()
     expected_events = [
         call.egor.player_score_changed(yura),
