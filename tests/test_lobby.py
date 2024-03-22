@@ -402,7 +402,7 @@ async def test_anton_disconnected_makes_choice(
 
 
 @pytest.mark.usefixtures(
-    "yura_connected", "egor_connected", "anton_connected", "game_started"
+    "egor_connected", "yura_connected", "anton_connected", "game_started"
 )
 async def test_make_multiple_choice(
     lobby: Lobby, egor: Player, yura: Player, anton: Player, outbox: Mock
@@ -413,5 +413,5 @@ async def test_make_multiple_choice(
     yura.make_turn(second_choice)
     anton.make_turn(anton.hand[0])
     assert isinstance(lobby.state, Judgement)
-    assert lobby.card_on_table_of(yura) is second_choice
+    assert lobby.card_on_table_of(yura).card is second_choice
     assert first_choice in yura.hand
