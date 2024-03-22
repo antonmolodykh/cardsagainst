@@ -428,11 +428,28 @@ async def test_refresh_hand(
     yura.refresh_hand()
     expected_events = [
         outbox.yura.hand_refreshed(ANY),
+    ]
+    outbox.assert_has_calls(expected_events)
+    outbox.egor.player_score_changed.assert_not_called()
+    outbox.anton.player_score_changed.assert_not_called()
+    assert not set(prev_hand) & set(yura.hand)
+    assert yura.score == 0
+
+
+@pytest.mark.usefixtures(
+    "egor_connected", "yura_connected", "anton_connected", "game_started"
+)
+async def test_refresh_hand_decrease_score(
+    lobby: Lobby, egor: Player, yura: Player, anton: Player, outbox: Mock
+) -> None:
+    yura.score = 4
+    yura.refresh_hand()
+    expected_events = [
         outbox.egor.player_score_changed(yura),
         outbox.anton.player_score_changed(yura),
     ]
-    outbox.assert_has_calls(expected_events)
-    assert not set(prev_hand) & set(yura.hand)
+    outbox.assert_has_calls(expected_events, any_order=True)
+    assert yura.score == 3
 
 
 @pytest.mark.usefixtures(
