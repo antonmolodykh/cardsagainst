@@ -389,7 +389,7 @@ async def test_resurrect(
 
 @pytest.mark.usefixtures("yura_connected", "egor_connected", "game_started")
 async def test_anton_disconnected_makes_choice(
-    lobby: Lobby, egor: Player, yura: Player, anton: Player, outbox: Mock
+    lobby: Lobby, egor: Player, yura: Player, anton: Player
 ) -> None:
     first_choice = yura.hand[0]
     yura.make_turn(first_choice)
@@ -405,7 +405,7 @@ async def test_anton_disconnected_makes_choice(
     "egor_connected", "yura_connected", "anton_connected", "game_started"
 )
 async def test_make_multiple_choice(
-    lobby: Lobby, egor: Player, yura: Player, anton: Player, outbox: Mock
+    lobby: Lobby, egor: Player, yura: Player, anton: Player
 ) -> None:
     first_choice = yura.hand[0]
     yura.make_turn(first_choice)
@@ -415,3 +415,21 @@ async def test_make_multiple_choice(
     assert isinstance(lobby.state, Judgement)
     assert lobby.card_on_table_of(yura).card is second_choice
     assert first_choice in yura.hand
+
+
+@pytest.mark.usefixtures(
+    "egor_connected", "yura_connected", "anton_connected", "game_started"
+)
+async def test_refresh_hand(
+    lobby: Lobby, egor: Player, yura: Player, anton: Player, outbox: Mock
+) -> None:
+    prev_hand = yura.hand.copy()
+    yura.refresh_hand()
+    expected_events = [
+        outbox.yura.hand_refreshed(ANY),
+        outbox.egor.player_score_changed(yura),
+        outbox.anton.player_score_changed(yura),
+    ]
+    outbox.assert_has_calls(expected_events)
+    (new_hand,), _ = outbox.yura.hand_refreshed.call_args
+    assert not (set(prev_hand) & set(new_hand))
