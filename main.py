@@ -133,6 +133,15 @@ class GameStartedData(ApiModel):
     hand: list[PunchlineData]
 
 
+class HandRefreshData(ApiModel):
+    hand: list[PunchlineData]
+
+
+class PlayerScoreChangedData(ApiModel):
+    uuid: str
+    score: int
+
+
 class RemotePlayer(LobbyObserver):
     def __init__(self, websocket: WebSocket, lobby: Lobby, player: Player) -> None:
         self.lobby = lobby
@@ -239,7 +248,7 @@ class RemotePlayer(LobbyObserver):
         )
 
     def welcome(self):
-        selected_card = self.lobby.get_selected_card(self.player)
+        selected_card = self.lobby.card_on_table_of(self.player)
         self._queue.put_nowait(
             Event(
                 id=1,
@@ -276,10 +285,33 @@ class RemotePlayer(LobbyObserver):
                     owner_uuid=self.lobby.owner.uuid,
                     self_uuid=self.player.uuid,
                     selected_card=(
-                        PunchlineData.from_card(selected_card)
+                        PunchlineData.from_card(selected_card.card)
                         if selected_card
                         else None
                     ),
+                ),
+            )
+        )
+
+    def hand_refreshed(self, new_hand: list[PunchlineCard]) -> None:
+        self._queue.put_nowait(
+            Event(
+                id=1,
+                type="handRefreshed",
+                data=HandRefreshData(
+                    hand=[PunchlineData.from_card(card) for card in new_hand]
+                ),
+            )
+        )
+
+    def player_score_changed(self, player: Player) -> None:
+        self._queue.put_nowait(
+            Event(
+                id=1,
+                type="playerScoreChanged",
+                data=PlayerScoreChangedData(
+                    uuid=player.uuid,
+                    score=player.score,
                 ),
             )
         )
@@ -303,6 +335,8 @@ class RemotePlayer(LobbyObserver):
                     setups=await cards_dao.get_setups(deck_id="one"),
                     punchlines=await cards_dao.get_punchlines(deck_id="one"),
                 )
+            case "refreshHand":
+                self.player.refresh_hand()
             case "makeTurn":
                 event = Event[MakeTurnData].model_validate(json_data)
                 try:

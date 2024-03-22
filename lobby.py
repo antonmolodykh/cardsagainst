@@ -32,6 +32,14 @@ class UnknownPlayerError(Exception):
     pass
 
 
+class PlayerAlreadyReadyError(Exception):
+    pass
+
+
+class ScoreTooLowError(Exception):
+    pass
+
+
 class LobbyObserver:
     def owner_changed(self, player: Player):
         pass
@@ -77,6 +85,12 @@ class LobbyObserver:
         pass
 
     def welcome(self):
+        pass
+
+    def hand_refreshed(self, new_hand: list[PunchlineCard]) -> None:
+        pass
+
+    def player_score_changed(self, player: Player) -> None:
         pass
 
 
@@ -143,6 +157,9 @@ class Player:
             setups=setups,
             punchlines=punchlines,
         )
+
+    def refresh_hand(self) -> None:
+        self.lobby.state.refresh_hand(self)
 
     def make_turn(self, card: PunchlineCard) -> CardOnTable:
         self.lobby.state.make_turn(self, card)
@@ -241,6 +258,11 @@ class State:
             f"method `end_turn` not expected in state {type(self).__name__}"
         )
 
+    def refresh_hand(self, player: Player):
+        raise Exception(
+            f"method `refresh_hand` not expected in state {type(self).__name__}"
+        )
+
 
 class Gathering(State):
     def start_game(
@@ -274,7 +296,7 @@ class Turns(State):
         self.try_end_turn()
 
     def make_turn(self, player: Player, card: PunchlineCard) -> None:
-        self.choose_punchline_card(player, card)
+        self.put_card_on_table(player, card)
         self.try_end_turn()
 
     def try_end_turn(self) -> None:
@@ -288,7 +310,7 @@ class Turns(State):
     def end_turn(self):
         for player in self.lobby.players:
             if player.is_connected and not player.is_ready:
-                self.choose_punchline_card(player, random.choice(player.hand))
+                self.put_card_on_table(player, random.choice(player.hand))
 
         random.shuffle(self.lobby.table)
         for pl in self.lobby.all_players:
@@ -299,17 +321,39 @@ class Turns(State):
         else:
             # self.lobby.transit_to(Voting(self.setup))
             # TODO: make turn, return table
-            raise NotImplemented
+            raise NotImplementedError
 
-    def choose_punchline_card(self, player: Player, card: PunchlineCard) -> None:
+    def put_card_on_table(self, player: Player, card: PunchlineCard) -> None:
         if card not in player.hand:
             raise CardNotInPlayerHandError
+
+        if prev_card := self.lobby.card_on_table_of(player):
+            self.lobby.table.remove(prev_card)
+            player.hand.append(prev_card.card)
 
         self.lobby.table.append(CardOnTable(card=card, player=player))
         player.hand.remove(card)
         player.is_ready = True
         for pl in self.lobby.all_players:
             pl.observer.player_ready(player)
+
+    def refresh_hand(self, player: Player) -> None:
+        if player.is_ready:
+            raise PlayerAlreadyReadyError()
+
+        new_hand = [
+            self.lobby.punchlines.get_card() for _ in range(self.lobby.HAND_SIZE)
+        ]
+        self.lobby.punchlines.dump(player.hand)
+        player.hand = new_hand
+
+        if player.score < 0:
+            raise ScoreTooLowError()
+        player.score -= 1
+
+        player.observer.hand_refreshed(new_hand)
+        for pl in self.lobby.all_players:
+            pl.observer.player_score_changed(player)
 
 
 class Judgement(State):
@@ -326,7 +370,7 @@ class Judgement(State):
     def start_voting(self):
         # self.lobby.transit_to(Voting(self.setup))
         # TODO: make turn, dump table
-        raise NotImplemented
+        raise NotImplementedError
 
     def open_table_card(self, player: Player, card_on_table: CardOnTable) -> None:
         if self.lobby.lead is not player:
@@ -464,10 +508,10 @@ class Lobby:
     def all_players_except(self, player: Player):
         return [p for p in self.all_players if p is not player]
 
-    def get_selected_card(self, player: Player) -> PunchlineCard | None:
+    def card_on_table_of(self, player: Player) -> CardOnTable | None:
         for card_on_tabel in self.table:
             if card_on_tabel.player is player:
-                return card_on_tabel.card
+                return card_on_tabel
         return None
 
     def change_owner(self) -> None:
@@ -528,7 +572,7 @@ class Lobby:
         for card_on_table in self.table:
             if card is card_on_table.card:
                 return card_on_table
-        raise NotImplemented
+        raise NotImplementedError
 
     def connect(self, player: Player) -> None:
         if player not in self.all_players:
