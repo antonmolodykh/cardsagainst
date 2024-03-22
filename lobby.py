@@ -32,6 +32,14 @@ class UnknownPlayerError(Exception):
     pass
 
 
+class PlayerAlreadyReadyError(Exception):
+    pass
+
+
+class ScoreTooLowError(Exception):
+    pass
+
+
 class LobbyObserver:
     def owner_changed(self, player: Player):
         pass
@@ -77,6 +85,12 @@ class LobbyObserver:
         pass
 
     def welcome(self):
+        pass
+
+    def hand_refreshed(self, new_hand: list[PunchlineCard]) -> None:
+        pass
+
+    def player_score_changed(self, player: Player) -> None:
         pass
 
 
@@ -143,6 +157,9 @@ class Player:
             setups=setups,
             punchlines=punchlines,
         )
+
+    def refresh_hand(self) -> None:
+        self.lobby.state.refresh_hand(self)
 
     def make_turn(self, card: PunchlineCard) -> CardOnTable:
         self.lobby.state.make_turn(self, card)
@@ -241,6 +258,11 @@ class State:
             f"method `end_turn` not expected in state {type(self).__name__}"
         )
 
+    def refresh_hand(self, player: Player):
+        raise Exception(
+            f"method `refresh_hand` not expected in state {type(self).__name__}"
+        )
+
 
 class Gathering(State):
     def start_game(
@@ -314,6 +336,24 @@ class Turns(State):
         player.is_ready = True
         for pl in self.lobby.all_players:
             pl.observer.player_ready(player)
+
+    def refresh_hand(self, player: Player) -> None:
+        if player.is_ready:
+            raise PlayerAlreadyReadyError()
+
+        new_hand = [
+            self.lobby.punchlines.get_card() for _ in range(self.lobby.HAND_SIZE)
+        ]
+        self.lobby.punchlines.dump(player.hand)
+        player.hand = new_hand
+
+        if player.score < 0:
+            raise ScoreTooLowError()
+        player.score -= 1
+
+        player.observer.hand_refreshed(new_hand)
+        for pl in self.lobby.all_players:
+            pl.observer.player_score_changed(player)
 
 
 class Judgement(State):
