@@ -429,7 +429,7 @@ async def test_refresh_hand(
     prev_hand = yura.hand.copy()
     yura.refresh_hand()
     expected_events = [
-        outbox.yura.hand_refreshed(ANY),
+        outbox.yura.hand_refreshed(yura.hand),
         outbox.egor.player_score_changed(yura),
         outbox.anton.player_score_changed(yura),
     ]
