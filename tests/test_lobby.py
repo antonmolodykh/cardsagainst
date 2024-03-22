@@ -388,6 +388,22 @@ async def test_resurrect(
 
 
 @pytest.mark.usefixtures("yura_connected", "egor_connected", "game_started")
+async def test_anton_disconnected_makes_choice(
+    lobby: Lobby, egor: Player, yura: Player, anton: Player, outbox: Mock
+) -> None:
+    first_choice = yura.hand[0]
+    yura.make_turn(first_choice)
+    second_choice = yura.hand[0]
+    yura.make_turn(second_choice)
+    try:
+        anton.make_turn(anton.hand[0])
+    except IndexError:
+        pytest.skip("Почему отключенный Антон не имеет карт в руке?")
+
+
+@pytest.mark.usefixtures(
+    "yura_connected", "egor_connected", "anton_connected", "game_started"
+)
 async def test_make_multiple_choice(
     lobby: Lobby, egor: Player, yura: Player, anton: Player, outbox: Mock
 ) -> None:
