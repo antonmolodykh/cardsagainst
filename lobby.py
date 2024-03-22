@@ -370,7 +370,7 @@ class Judgement(State):
     def start_voting(self):
         # self.lobby.transit_to(Voting(self.setup))
         # TODO: make turn, dump table
-        raise NotImplemented
+        raise NotImplementedError
 
     def open_table_card(self, player: Player, card_on_table: CardOnTable) -> None:
         if self.lobby.lead is not player:
@@ -572,7 +572,7 @@ class Lobby:
         for card_on_table in self.table:
             if card is card_on_table.card:
                 return card_on_table
-        raise NotImplemented
+        raise NotImplementedError
 
     def connect(self, player: Player) -> None:
         if player not in self.all_players:
