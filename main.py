@@ -174,13 +174,13 @@ class RemotePlayer(LobbyObserver):
             Event(id=1, type="playerDisconnected", data=PlayerIdData(uuid=player.uuid))
         )
 
-    def game_started(self, player: Player):
+    def game_started(self):
         self._queue.put_nowait(
             Event(
                 id=1,
                 type="gameStarted",
                 data=GameStartedData(
-                    hand=[PunchlineData.from_card(item) for item in player.hand]
+                    hand=[PunchlineData.from_card(item) for item in self.player.hand]
                 ),
             )
         )
@@ -280,7 +280,7 @@ class RemotePlayer(LobbyObserver):
                         if isinstance(self.lobby.state, Judgement | Turns)
                         else None
                     ),
-                    timeout=self.lobby.settings.turn_duration,
+                    timeout=self.lobby.game.settings.turn_duration,
                     lead_uuid=self.lobby.lead.uuid if self.lobby.lead else None,
                     owner_uuid=self.lobby.owner.uuid,
                     self_uuid=self.player.uuid,
@@ -351,7 +351,7 @@ class RemotePlayer(LobbyObserver):
             case "pickTurnWinner":
                 event = Event[PickTurnWinnerData].model_validate(json_data)
                 try:
-                    card = self.lobby.punchlines.get_card_by_uuid(int(event.data.id))
+                    card = self.lobby.game.punchlines.get_card_by_uuid(int(event.data.id))
                 except KeyError:
                     return
                 self.player.pick_turn_winner(card)
@@ -465,7 +465,6 @@ async def connect(
     *,
     lobby_token: Annotated[str | None, Query(alias="lobbyToken")] = None,
     connect_request: ConnectRequest,
-    cards_dao: CardsDAODependency,
 ) -> ConnectResponse:
     player = Player(
         profile=Profile(
@@ -481,7 +480,6 @@ async def connect(
             raise HTTPException(status_code=404)
     else:
         lobby = Lobby(
-            LobbySettings(winning_score=config.winning_score),
             owner=player,
             state=Gathering(),
         )

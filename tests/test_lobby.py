@@ -168,7 +168,7 @@ async def test_start_game(
     assert isinstance(lobby.state, Turns)
 
     expected_events = [
-        call.game_started(egor),
+        call.game_started(),
         call.turn_started(
             setup=lobby.state.setup,
             turn_duration=lobby_settings.turn_duration,
@@ -179,7 +179,7 @@ async def test_start_game(
     outbox.egor.assert_has_calls(expected_events)
 
     expected_events = [
-        call.game_started(yura),
+        call.game_started(),
         call.turn_started(
             setup=lobby.state.setup,
             turn_duration=lobby_settings.turn_duration,
@@ -315,7 +315,7 @@ async def test_start_game_after_finish(
     assert isinstance(lobby.state, Turns)
 
     expected_events = [
-        call.game_started(egor),
+        call.game_started(),
         call.turn_started(
             setup=lobby.state.setup,
             turn_duration=10,
@@ -326,7 +326,7 @@ async def test_start_game_after_finish(
     outbox.egor.assert_has_calls(expected_events)
 
     expected_events = [
-        call.game_started(yura),
+        call.game_started(),
         call.turn_started(
             setup=lobby.state.setup,
             turn_duration=10,

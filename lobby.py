@@ -56,7 +56,7 @@ class LobbyObserver:
     def player_connected(self, player: Player):
         pass
 
-    def game_started(self, player: Player):
+    def game_started(self):
         pass
 
     def turn_started(
@@ -264,6 +264,7 @@ class State:
         )
 class Game:
     def __init__(self, punchlines: Deck[PunchlineCard], setups: Deck[SetupCard], settings: LobbySettings):
+        self.id = uuid4().hex
         self.punchlines = punchlines
         self.setups = setups
         self.settings = settings
@@ -286,7 +287,7 @@ class Gathering(State):
         for pl in self.lobby.all_players:
             for _ in range(self.lobby.HAND_SIZE):
                 pl.add_punchline_card(self.lobby.game.punchlines.get_card())
-            pl.observer.game_started(pl)
+            pl.observer.game_started()
 
         self.lobby.start_turn()
 
