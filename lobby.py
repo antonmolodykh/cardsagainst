@@ -262,7 +262,10 @@ class State:
         raise Exception(
             f"method `refresh_hand` not expected in state {type(self).__name__}"
         )
-
+class Game:
+    def __init__(self, punchlines: Deck[PunchlineCard], setups: Deck[SetupCard]):
+        self.punchlines = punchlines
+        self.setups = setups
 
 class Gathering(State):
     def start_game(
@@ -275,13 +278,13 @@ class Gathering(State):
         if player is not self.lobby.owner:
             raise PlayerNotOwnerError
 
-        self.lobby.setups = setups
-        self.lobby.punchlines = punchlines
+        self.lobby.game = Game(setups=setups, punchlines=punchlines)
+
 
         self.lobby.settings = lobby_settings
         for pl in self.lobby.all_players:
             for _ in range(self.lobby.HAND_SIZE):
-                pl.add_punchline_card(self.lobby.punchlines.get_card())
+                pl.add_punchline_card(self.lobby.game.punchlines.get_card())
             pl.observer.game_started(pl)
 
         self.lobby.start_turn()
@@ -342,9 +345,9 @@ class Turns(State):
             raise PlayerAlreadyReadyError()
 
         new_hand = [
-            self.lobby.punchlines.get_card() for _ in range(self.lobby.HAND_SIZE)
+            self.lobby.game.punchlines.get_card() for _ in range(self.lobby.HAND_SIZE)
         ]
-        self.lobby.punchlines.dump(player.hand)
+        self.lobby.game.punchlines.dump(player.hand)
         player.hand = new_hand
 
         if player.score < 0:
@@ -396,7 +399,7 @@ class Judgement(State):
         for pl in self.lobby.all_players:
             pl.observer.turn_ended(card_on_table.player, card)
 
-        self.lobby.punchlines.dump(
+        self.lobby.game.punchlines.dump(
             [card_on_table.card for card_on_table in self.lobby.table]
         )
         self.lobby.table = []
@@ -418,7 +421,7 @@ class Judgement(State):
         asyncio.create_task(start_turn())
 
     def start_turn(self):
-        self.lobby.setups.dump([self.setup])
+        self.lobby.game.setups.dump([self.setup])
         self.lobby.start_turn()
 
     def finish_game(self, winner: Player):
@@ -434,7 +437,7 @@ class Finished(State):
         self.winner = winner
 
     def start_turn(self):
-        self.lobby.setups.dump([self.setup])
+        self.lobby.game.setups.dump([self.setup])
         self.lobby.start_turn()
 
     def continue_game(self, player: Player) -> None:
@@ -469,8 +472,6 @@ class Lobby:
     owner: Player
     table: list[CardOnTable]
     grave: set[Player]
-    punchlines: Deck[PunchlineCard]
-    setups: Deck[SetupCard]
     observer: LobbyObserver
     settings: LobbySettings
     turn_count: int
@@ -482,18 +483,15 @@ class Lobby:
         self,
         settings: LobbySettings,
         owner: Player,
-        setups: Deck[SetupCard],
-        punchlines: Deck[PunchlineCard],
         state: Gathering,
     ) -> None:
         self.players = []
         self.lead = None
+        self.game = None
         self.owner = owner
         self.table = []
         self.grave = set()
         self.uid = uuid4()
-        self.punchlines = punchlines
-        self.setups = setups
         self.settings = settings
         self.state = state
         self.state.lobby = self
@@ -538,7 +536,7 @@ class Lobby:
 
     def start_turn(self):
         self.change_lead()
-        new_setup = self.setups.get_card()
+        new_setup = self.game.setups.get_card()
         self.turn_count += 1
 
         async def turn_timer() -> None:
@@ -551,7 +549,7 @@ class Lobby:
         for pl in self.all_players:
             pl.is_ready = False
             if len(pl.hand) != self.HAND_SIZE:
-                new_card = self.punchlines.get_card()
+                new_card = self.game.punchlines.get_card()
                 pl.add_punchline_card(new_card)
                 pl.observer.turn_started(
                     setup=new_setup,
@@ -584,7 +582,7 @@ class Lobby:
 
         if not isinstance(self.state, Gathering):
             while len(player.hand) < self.HAND_SIZE:
-                player.add_punchline_card(self.punchlines.get_card())
+                player.add_punchline_card(self.game.punchlines.get_card())
 
         for pl in self.all_players_except(player):
             pl.observer.player_connected(player)
@@ -617,7 +615,7 @@ class Lobby:
 
         for card_on_table in self.table:
             if card_on_table.player is player:
-                self.punchlines.dump([card_on_table.card])
+                self.game.punchlines.dump([card_on_table.card])
                 # TODO: Если сбросить карту игрока, то надо как-то оповестить
                 #   остальных, что эту карту надо убрать со стола
                 self.table.remove(card_on_table)

@@ -89,8 +89,6 @@ def lobby_settings() -> LobbySettings:
 @pytest.fixture
 def lobby(  # TODO: Переименовать в лобби егора, чтобы было понятно, что он owner
     egor: Player,
-    setup_deck: Deck[SetupCard],
-    punchline_deck: Deck[PunchlineCard],
     outbox: Mock,
     state_gathering: Gathering,
     lobby_settings: LobbySettings,
@@ -99,10 +97,6 @@ def lobby(  # TODO: Переименовать в лобби егора, что�
         settings=lobby_settings,
         owner=egor,
         state=state_gathering,
-        # TODO: Колода определяется в момент начала игры.
-        #   Можно не инициализировать это при создании лобби
-        setups=setup_deck,
-        punchlines=punchline_deck,
     )
 
 

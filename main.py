@@ -340,7 +340,7 @@ class RemotePlayer(LobbyObserver):
             case "makeTurn":
                 event = Event[MakeTurnData].model_validate(json_data)
                 try:
-                    card = self.lobby.punchlines.get_card_by_uuid(int(event.data.id))
+                    card = self.lobby.game.punchlines.get_card_by_uuid(int(event.data.id))
                 except KeyError:
                     print("unknown card")
                     return
@@ -417,6 +417,7 @@ class Event(ApiModel, Generic[AnyEventData]):
 class StartGameData(ApiModel):
     turn_duration: int | None = None
     winning_score: int | None = None
+    # deck_id: str | None
 
 
 class MakeTurnData(ApiModel):
@@ -482,8 +483,6 @@ async def connect(
         lobby = Lobby(
             LobbySettings(winning_score=config.winning_score),
             owner=player,
-            setups=await cards_dao.get_setups(deck_id="one"),
-            punchlines=await cards_dao.get_punchlines(deck_id="one"),
             state=Gathering(),
         )
         lobby_token = uuid4().hex[:8]
