@@ -550,7 +550,10 @@ async def websocket_endpoint(
                 run_remove_player(lobby, player, lobby_token, player_token)
             )
             break
-        except Exception:
+        except Exception as exception:
+            await websocket.send_json(
+                {"type": "error", "data": exception.__class__.__name__}
+            )
             print(f"Unexpected error: {traceback.format_exc()}")
 
 
