@@ -150,8 +150,8 @@ class Player:
         settings: LobbySettings,
         setups: Deck[SetupCard],
         punchlines: Deck[PunchlineCard],
-    ) -> None:
-        self.lobby.state.start_game(
+    ) -> GameStarted:
+        return self.lobby.state.start_game(
             player=self,
             lobby_settings=settings,
             setups=setups,
@@ -269,6 +269,12 @@ class Game:
         self.setups = setups
         self.settings = settings
 
+
+@dataclass
+class GameStarted:
+    game: Game
+
+
 class Gathering(State):
     def start_game(
         self,
@@ -276,7 +282,7 @@ class Gathering(State):
         lobby_settings: LobbySettings,
         setups: Deck[SetupCard],
         punchlines: Deck[PunchlineCard],
-    ) -> None:
+    ) -> GameStarted:
         if player is not self.lobby.owner:
             raise PlayerNotOwnerError
 
@@ -290,6 +296,7 @@ class Gathering(State):
             pl.observer.game_started()
 
         self.lobby.start_turn()
+        return GameStarted(self.lobby.game)
 
 
 class Turns(State):
@@ -455,7 +462,7 @@ class Finished(State):
         lobby_settings: LobbySettings,
         setups: Deck[SetupCard],
         punchlines: Deck[PunchlineCard],
-    ) -> None:
+    ) -> GameStarted:
         self.lobby.table.clear()
         self.lobby.turn_count = 0
 
@@ -464,7 +471,7 @@ class Finished(State):
             pl.score = 0
 
         self.lobby.transit_to(Gathering())
-        player.start_game(lobby_settings, setups, punchlines)
+        return player.start_game(lobby_settings, setups, punchlines)
 
 
 class Lobby:

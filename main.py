@@ -18,8 +18,9 @@ from starlette.websockets import WebSocketDisconnect
 from typing_extensions import Annotated
 
 from config import config
-from dao import CardsDAO
-from dependencies import CardsDAODependency, lifespan, SessionDependency
+from dao import CardsDAO, GameStatsDAO
+from dependencies import CardsDAODependency, lifespan, SessionDependency, \
+    GameStatsDAODependency
 from lobby import (
     CardOnTable,
     Gathering,
@@ -323,11 +324,11 @@ class RemotePlayer(LobbyObserver):
             print(f"Event: {data}")
             await self.websocket.send_json(data)
 
-    async def handle_event(self, json_data: dict, cards_dao: CardsDAO) -> None:
+    async def handle_event(self, json_data: dict, cards_dao: CardsDAO, game_stats_dao: GameStatsDAO) -> None:
         match json_data["type"]:
             case "startGame":
                 event = Event[StartGameData].model_validate(json_data)
-                self.player.start_game(
+                game_started = self.player.start_game(
                     settings=LobbySettings(
                         turn_duration=event.data.turn_duration,
                         winning_score=event.data.winning_score or config.winning_score,
@@ -335,6 +336,9 @@ class RemotePlayer(LobbyObserver):
                     setups=await cards_dao.get_setups(deck_id="one"),
                     punchlines=await cards_dao.get_punchlines(deck_id="one"),
                 )
+                await game_stats_dao.insert(game_started)
+                print(f"Game started! {game_started}")
+
             case "refreshHand":
                 self.player.refresh_hand()
             case "makeTurn":
@@ -506,6 +510,7 @@ async def websocket_endpoint(
     player_token: Annotated[str, Query(alias="playerToken")],
     lobby_token: Annotated[str, Query(alias="lobbyToken")],
     cards_dao: CardsDAODependency,
+    game_stats_dao: GameStatsDAODependency,
 ):
     await websocket.accept()
     try:
@@ -538,7 +543,7 @@ async def websocket_endpoint(
         try:
             json_data = await websocket.receive_json()
             print(f"Received event: {json_data}")
-            await remote_player.handle_event(json_data, cards_dao=cards_dao)
+            await remote_player.handle_event(json_data, cards_dao=cards_dao, game_stats_dao=game_stats_dao)
         except WebSocketDisconnect:
             send_events_task.cancel()
             player.disconnect()

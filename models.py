@@ -1,6 +1,6 @@
 import datetime
 
-from sqlalchemy import Text, Boolean, Date
+from sqlalchemy import Text, Boolean, Date, Integer
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.asyncio import AsyncAttrs
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
@@ -36,3 +36,13 @@ class Changelog(Base):
     version: Mapped[str] = mapped_column(Text, nullable=False)
     date: Mapped[datetime.date] = mapped_column(Date, nullable=False)
     text: Mapped[str] = mapped_column(Text, nullable=False)
+
+
+class GameStats(Base):
+    __tablename__ = "game_stats"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    winning_score: Mapped[int] = mapped_column(nullable=False)
+    turn_duration: Mapped[int] = mapped_column(nullable=False)
+    hand_size: Mapped[int] = mapped_column(nullable=False)
+
