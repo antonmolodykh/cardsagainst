@@ -263,9 +263,10 @@ class State:
             f"method `refresh_hand` not expected in state {type(self).__name__}"
         )
 class Game:
-    def __init__(self, punchlines: Deck[PunchlineCard], setups: Deck[SetupCard]):
+    def __init__(self, punchlines: Deck[PunchlineCard], setups: Deck[SetupCard], settings: LobbySettings):
         self.punchlines = punchlines
         self.setups = setups
+        self.settings = settings
 
 class Gathering(State):
     def start_game(
@@ -278,7 +279,7 @@ class Gathering(State):
         if player is not self.lobby.owner:
             raise PlayerNotOwnerError
 
-        self.lobby.game = Game(setups=setups, punchlines=punchlines)
+        self.lobby.game = Game(setups=setups, punchlines=punchlines, settings=lobby_settings)
 
 
         self.lobby.settings = lobby_settings
@@ -405,17 +406,17 @@ class Judgement(State):
         self.lobby.table = []
 
         async def finish_game(winner: Player):
-            await asyncio.sleep(self.lobby.settings.finish_delay)
+            await asyncio.sleep(self.lobby.game.settings.finish_delay)
             self.finish_game(winner)
 
         if not self.lobby.is_game_endless:
             for pl in self.lobby.players:
-                if pl.score == self.lobby.settings.winning_score:
+                if pl.score == self.lobby.game.settings.winning_score:
                     asyncio.create_task(finish_game(pl))
                     return
 
         async def start_turn():
-            await asyncio.sleep(self.lobby.settings.start_turn_delay)
+            await asyncio.sleep(self.lobby.game.settings.start_turn_delay)
             self.start_turn()
 
         asyncio.create_task(start_turn())
@@ -473,7 +474,6 @@ class Lobby:
     table: list[CardOnTable]
     grave: set[Player]
     observer: LobbyObserver
-    settings: LobbySettings
     turn_count: int
     is_game_endless: bool = False
 
@@ -481,7 +481,6 @@ class Lobby:
 
     def __init__(
         self,
-        settings: LobbySettings,
         owner: Player,
         state: Gathering,
     ) -> None:
@@ -492,7 +491,6 @@ class Lobby:
         self.table = []
         self.grave = set()
         self.uid = uuid4()
-        self.settings = settings
         self.state = state
         self.state.lobby = self
         self.turn_count = 0
@@ -540,7 +538,7 @@ class Lobby:
         self.turn_count += 1
 
         async def turn_timer() -> None:
-            if turn_duration := self.settings.turn_duration:
+            if turn_duration := self.game.settings.turn_duration:
                 await asyncio.sleep(turn_duration)
                 self.state.end_turn()
 
@@ -553,7 +551,7 @@ class Lobby:
                 pl.add_punchline_card(new_card)
                 pl.observer.turn_started(
                     setup=new_setup,
-                    turn_duration=self.settings.turn_duration,
+                    turn_duration=self.game.settings.turn_duration,
                     lead=self.lead,
                     card=new_card,
                     turn_count=self.turn_count,
@@ -561,7 +559,7 @@ class Lobby:
             else:
                 pl.observer.turn_started(
                     setup=new_setup,
-                    turn_duration=self.settings.turn_duration,
+                    turn_duration=self.game.settings.turn_duration,
                     lead=self.lead,
                     turn_count=self.turn_count,
                 )

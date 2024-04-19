@@ -91,10 +91,8 @@ def lobby(  # TODO: Переименовать в лобби егора, что�
     egor: Player,
     outbox: Mock,
     state_gathering: Gathering,
-    lobby_settings: LobbySettings,
 ) -> Lobby:
     return Lobby(
-        settings=lobby_settings,
         owner=egor,
         state=state_gathering,
     )
