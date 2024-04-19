@@ -262,8 +262,15 @@ class State:
         raise Exception(
             f"method `refresh_hand` not expected in state {type(self).__name__}"
         )
+
+
 class Game:
-    def __init__(self, punchlines: Deck[PunchlineCard], setups: Deck[SetupCard], settings: LobbySettings):
+    def __init__(
+        self,
+        punchlines: Deck[PunchlineCard],
+        setups: Deck[SetupCard],
+        settings: LobbySettings,
+    ):
         self.id = uuid4().hex
         self.punchlines = punchlines
         self.setups = setups
@@ -286,8 +293,9 @@ class Gathering(State):
         if player is not self.lobby.owner:
             raise PlayerNotOwnerError
 
-        self.lobby.game = Game(setups=setups, punchlines=punchlines, settings=lobby_settings)
-
+        self.lobby.game = Game(
+            setups=setups, punchlines=punchlines, settings=lobby_settings
+        )
 
         self.lobby.settings = lobby_settings
         for pl in self.lobby.all_players:
