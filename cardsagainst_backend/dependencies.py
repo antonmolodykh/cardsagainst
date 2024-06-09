@@ -7,8 +7,8 @@ from typing import Annotated, AsyncGenerator, TypeAlias
 from fastapi import Depends, FastAPI
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
-from dao import CardsDAO, GameStatsDAO
-from db import create_engine, create_tables_if_not_exist
+from cardsagainst_backend.dao import GameStatsDAO, CardsDAO
+from cardsagainst_backend.db import create_tables_if_not_exist, create_engine
 
 
 def cards_dao_dependency() -> CardsDAO:

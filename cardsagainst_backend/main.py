@@ -17,29 +17,24 @@ from sqlalchemy import select
 from starlette.websockets import WebSocketDisconnect
 from typing_extensions import Annotated
 
-from config import config
-from dao import CardsDAO, GameStatsDAO
-from dependencies import (
-    CardsDAODependency,
-    lifespan,
-    SessionDependency,
-    GameStatsDAODependency,
-)
-from cardsagainst import (
-    CardOnTable,
-    Gathering,
+from cardsagainst.deck import PunchlineCard, SetupCard
+from cardsagainst.exceptions import UnknownPlayerError
+from cardsagainst.lobby import (
     Judgement,
     Lobby,
-    LobbyObserver,
-    LobbySettings,
+    Gathering,
     Player,
-    Profile,
-    PunchlineCard,
-    SetupCard,
     Turns,
-    UnknownPlayerError,
+    CardOnTable,
+    LobbyObserver,
 )
-from models import Changelog
+from cardsagainst.profile import Profile
+from cardsagainst.settings import LobbySettings
+from cardsagainst_backend.config import config
+from cardsagainst_backend.dao import CardsDAO, GameStatsDAO
+from cardsagainst_backend.dependencies import lifespan, SessionDependency, \
+    GameStatsDAODependency, CardsDAODependency
+from cardsagainst_backend.models import Changelog
 
 observers: list[LobbyObserver] = []
 

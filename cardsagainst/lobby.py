@@ -3,41 +3,21 @@ from __future__ import annotations
 import asyncio
 import random
 from asyncio import Task
-from dataclasses import dataclass
-from typing import Generic, TypeVar
 from uuid import uuid4
 
-from pydantic import BaseModel
-
-lobbies = {}
-
-
-class CardNotInPlayerHandError(Exception):
-    pass
-
-
-class PlayerNotLeadError(Exception):
-    pass
-
-
-class PlayerNotOwnerError(Exception):
-    pass
-
-
-class NotAllCardsOpenedError(Exception):
-    pass
-
-
-class UnknownPlayerError(Exception):
-    pass
-
-
-class PlayerAlreadyReadyError(Exception):
-    pass
-
-
-class ScoreTooLowError(Exception):
-    pass
+from cardsagainst.deck import SetupCard, PunchlineCard, Deck
+from cardsagainst.exceptions import (
+    CardNotInPlayerHandError,
+    PlayerNotLeadError,
+    PlayerNotOwnerError,
+    NotAllCardsOpenedError,
+    UnknownPlayerError,
+    PlayerAlreadyReadyError,
+    ScoreTooLowError,
+)
+from cardsagainst.game import Game, GameStarted
+from cardsagainst.profile import Profile
+from cardsagainst.settings import LobbySettings
 
 
 class LobbyObserver:
@@ -92,25 +72,6 @@ class LobbyObserver:
 
     def player_score_changed(self, player: Player) -> None:
         pass
-
-
-@dataclass
-class SetupCard:
-    id: int
-    text: str
-    case: str
-    starts_with_punchline: bool
-
-
-@dataclass
-class PunchlineCard:
-    id: int
-    text: list[tuple[str, list[str]]]
-
-
-class Profile(BaseModel):
-    name: str
-    emoji: str
 
 
 class Player:
@@ -188,40 +149,6 @@ class CardOnTable:
         self.player = player
 
 
-AnyCard = TypeVar("AnyCard", bound=SetupCard | PunchlineCard)
-
-
-class Deck(Generic[AnyCard]):
-    def __init__(self, cards: list[AnyCard]) -> None:
-        self.cards = cards
-        self._dump = []
-        self._shuffle()
-        self.mapping = {card.id: card for card in cards}
-
-    def get_card_by_uuid(self, card_id):
-        return self.mapping[card_id]
-
-    def _shuffle(self):
-        random.shuffle(self.cards)
-
-    def get_card(self) -> AnyCard:
-        if not self.cards:
-            self.cards, self._dump = self._dump, []
-            self._shuffle()
-
-        return self.cards.pop()
-
-    def dump(self, cards: list[AnyCard]) -> None:
-        self._dump.extend(cards)
-
-
-class LobbySettings(BaseModel):
-    turn_duration: int | None = None
-    winning_score: int
-    finish_delay: int = 5
-    start_turn_delay: int = 5
-
-
 class State:
     lobby: Lobby
 
@@ -262,24 +189,6 @@ class State:
         raise Exception(
             f"method `refresh_hand` not expected in state {type(self).__name__}"
         )
-
-
-class Game:
-    def __init__(
-        self,
-        punchlines: Deck[PunchlineCard],
-        setups: Deck[SetupCard],
-        settings: LobbySettings,
-    ):
-        self.id = uuid4().hex
-        self.punchlines = punchlines
-        self.setups = setups
-        self.settings = settings
-
-
-@dataclass
-class GameStarted:
-    game: Game
 
 
 class Gathering(State):
@@ -553,6 +462,7 @@ class Lobby:
         new_setup = self.game.setups.get_card()
         self.turn_count += 1
 
+        # TODO: вынести таймер куда-то
         async def turn_timer() -> None:
             if turn_duration := self.game.settings.turn_duration:
                 await asyncio.sleep(turn_duration)
@@ -595,6 +505,7 @@ class Lobby:
             self.add_player(player)
 
         if not isinstance(self.state, Gathering):
+            # TODO: Тут баг. Нужно зарефакторить
             while len(player.hand) < self.HAND_SIZE:
                 player.add_punchline_card(self.game.punchlines.get_card())
 

@@ -1,6 +1,6 @@
 import datetime
 
-from sqlalchemy import Text, Boolean, Date, Integer
+from sqlalchemy import Text, Boolean, Date
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.asyncio import AsyncAttrs
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column

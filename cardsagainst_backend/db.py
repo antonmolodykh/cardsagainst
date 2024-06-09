@@ -1,7 +1,7 @@
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 
-from config import config
-from models import metadata
+from cardsagainst_backend.config import config
+from cardsagainst_backend.models import metadata
 
 
 def create_engine() -> AsyncEngine:
