@@ -15,6 +15,7 @@ def cards_dao_dependency() -> CardsDAO:
     # Will be injected on startup
     raise NotImplementedError
 
+
 def game_stats_dao_dependency() -> GameStatsDAO:
     # Will be injected on startup
     raise NotImplementedError
@@ -26,7 +27,9 @@ def session_dependency() -> async_sessionmaker:
 
 
 CardsDAODependency: TypeAlias = Annotated[CardsDAO, Depends(cards_dao_dependency)]
-GameStatsDAODependency: TypeAlias = Annotated[GameStatsDAO, Depends(game_stats_dao_dependency)]
+GameStatsDAODependency: TypeAlias = Annotated[
+    GameStatsDAO, Depends(game_stats_dao_dependency)
+]
 SessionDependency: TypeAlias = Annotated[
     async_sessionmaker, Depends(session_dependency)
 ]
@@ -45,7 +48,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     app.dependency_overrides = {
         session_dependency: lambda: async_session,
         cards_dao_dependency: lambda: cards_dao,
-        game_stats_dao_dependency: lambda: game_stats_dao
+        game_stats_dao_dependency: lambda: game_stats_dao,
     }
 
     yield

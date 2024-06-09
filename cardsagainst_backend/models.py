@@ -45,4 +45,3 @@ class GameStats(Base):
     winning_score: Mapped[int] = mapped_column(nullable=False)
     turn_duration: Mapped[int] = mapped_column(nullable=False)
     hand_size: Mapped[int] = mapped_column(nullable=False)
-

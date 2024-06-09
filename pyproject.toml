@@ -1,18 +1,22 @@
 [tool.poetry]
-name = "projects"
-version = "0.1.0"
-description = ""
+name = "cardsagainst"
+version = "1.0.0"
+description = "Online game"
 authors = [
     "amolodykh <antonmolodykh96@gmail.com>",
     "Yuriy Kehter <yuriy.kehter+420cards@gmail.com>"
 ]
 readme = "README.md"
+packages = [
+    { include = "cardsagainst" },
+    { include = "cardsagainst_backend" }
+]
 
 [tool.poetry.dependencies]
 python = "^3.11"
-fastapi = "^0.110.0"
-pydantic = "^2.6.4"
-uvicorn = "^0.28.0"
+fastapi = "^0.111.0"
+pydantic = "^2.7.3"
+uvicorn = "^0.30.1"
 websockets = "^12.0"
 sqlalchemy = "^2.0.28"
 asyncpg = "^0.29.0"
