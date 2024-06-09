@@ -1,6 +1,7 @@
 import datetime
+from enum import IntEnum
 
-from sqlalchemy import Text, Boolean, Date, Integer
+from sqlalchemy import Text, Boolean, Date, Integer, ForeignKey
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.asyncio import AsyncAttrs
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
@@ -46,3 +47,19 @@ class GameStats(Base):
     turn_duration: Mapped[int] = mapped_column(nullable=False)
     hand_size: Mapped[int] = mapped_column(nullable=False)
 
+
+class CardEventType(IntEnum):
+    moved_to_hand = 0
+    moved_to_table = 1
+    won = 2
+    dumped = 3
+    flushed = 4
+
+
+class StatsCardsEvents(Base):
+    __tablename__ = "stats_cards_events"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    punchline_id: Mapped[int] = mapped_column(ForeignKey("punchlines.id"), nullable=False)
+    event_type_id: Mapped[CardEventType] = mapped_column(nullable=False)
+    setup_id: Mapped[int] = mapped_column(ForeignKey("setups.id"), nullable=False)
