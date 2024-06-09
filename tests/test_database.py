@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from dao import CardsDAO
 from db import create_engine, create_tables_if_not_exist
-from lobby import PunchlineCard, SetupCard
+from cardsagainst import PunchlineCard, SetupCard
 from models import Punchline, Setup, metadata
 
 

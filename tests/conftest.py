@@ -3,7 +3,7 @@ from unittest.mock import Mock
 import pytest
 from config import config
 
-from lobby import (
+from cardsagainst import (
     Deck,
     Gathering,
     Lobby,

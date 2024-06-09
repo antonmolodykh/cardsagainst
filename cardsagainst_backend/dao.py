@@ -1,7 +1,7 @@
 from sqlalchemy import select, insert
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
-from lobby import Deck, PunchlineCard, SetupCard, GameStarted, Lobby
+from cardsagainst import Deck, PunchlineCard, SetupCard, GameStarted, Lobby
 from models import Punchline, Setup, GameStats
 
 

@@ -25,7 +25,7 @@ from dependencies import (
     SessionDependency,
     GameStatsDAODependency,
 )
-from lobby import (
+from cardsagainst import (
     CardOnTable,
     Gathering,
     Judgement,

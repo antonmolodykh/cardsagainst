@@ -3,7 +3,7 @@ from unittest.mock import ANY, Mock, call
 
 import pytest
 
-from lobby import (
+from cardsagainst import (
     CardNotInPlayerHandError,
     Deck,
     Judgement,
