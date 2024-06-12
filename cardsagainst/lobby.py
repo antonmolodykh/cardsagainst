@@ -384,10 +384,12 @@ class Finished(State):
 
 
 class Lobby:
+    game: Game | None = None
     lead: Player | None = None
     observer: LobbyObserver
     # TODO: Move to Game
     is_game_endless: bool = False
+    turn_count = 0
 
     def __init__(
         self,
@@ -395,15 +397,12 @@ class Lobby:
         state: Gathering,
     ) -> None:
         self.players: list[Player] = []
-        self.lead = None
-        self.game = None
         self.owner = owner
         self.table: list[CardOnTable] = []
         self.grave: set[Player] = set()
         self.uid: uuid4 = uuid4()
-        self.state = state
+        self.state: State = state
         self.state.lobby = self
-        self.turn_count = 0
 
     @property
     def all_players(self):
