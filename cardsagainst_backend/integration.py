@@ -5,29 +5,20 @@ import datetime
 import traceback
 from asyncio import Task
 from enum import StrEnum
-from typing import MutableMapping, TypeVar, Generic
+from typing import Generic, MutableMapping, TypeVar
 from uuid import uuid4
-
-from fastapi import Query, HTTPException, APIRouter
-from sqlalchemy import select
-from typing_extensions import Annotated
 from weakref import WeakValueDictionary
 
+from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, ConfigDict
 from pydantic.alias_generators import to_camel
+from sqlalchemy import select
 from starlette.websockets import WebSocket, WebSocketDisconnect
+from typing_extensions import Annotated
 
-from cardsagainst.deck import SetupCard, PunchlineCard
+from cardsagainst.deck import PunchlineCard, SetupCard
 from cardsagainst.exceptions import UnknownPlayerError
-from cardsagainst.lobby import (
-    LobbyObserver,
-    Player,
-    Lobby,
-    CardOnTable,
-    Judgement,
-    Turns,
-    Gathering,
-)
+from cardsagainst.lobby import CardOnTable, Gathering, Lobby, LobbyObserver, Player
 from cardsagainst.settings import LobbySettings
 from cardsagainst_backend.config import config
 from cardsagainst_backend.dao import CardsDAO, GameStatsDAO
@@ -72,10 +63,7 @@ class SetupData(ApiModel):
     starts_with_punchline: bool
 
     @classmethod
-    def from_setup(cls, setup: SetupCard | None):
-        if not setup:
-            return None
-
+    def from_setup(cls, setup: SetupCard) -> SetupData:
         return cls(
             id=setup.id,
             text=setup.text,
@@ -260,7 +248,11 @@ class RemotePlayer(LobbyObserver):
                         for card_on_table in self.lobby.table
                     ],
                     hand=[PunchlineData.from_card(item) for item in self.player.hand],
-                    setup=SetupData.from_setup(setup) if (setup := self.lobby.setup) else None,
+                    setup=(
+                        SetupData.from_setup(setup)
+                        if (setup := self.lobby.setup)
+                        else None
+                    ),
                     timeout=self.lobby.game.settings.turn_duration,
                     lead_uuid=self.lobby.lead.uuid if self.lobby.lead else None,
                     owner_uuid=self.lobby.owner.uuid,
