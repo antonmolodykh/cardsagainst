@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from pydantic import BaseModel
+from dataclasses import dataclass
 
 
-class Profile(BaseModel):
+@dataclass
+class Profile:
     name: str
     emoji: str
