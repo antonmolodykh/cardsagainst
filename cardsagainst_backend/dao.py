@@ -53,7 +53,7 @@ class GameStatsDAO:
             query = insert(GameStats).values(
                 winning_score=event.game.settings.winning_score,
                 turn_duration=event.game.settings.turn_duration,
-                hand_size=Lobby.HAND_SIZE,
+                hand_size=event.game.settings.hand_size,
             )
             await session.execute(query)
             await session.commit()

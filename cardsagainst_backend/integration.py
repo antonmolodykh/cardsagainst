@@ -120,7 +120,7 @@ class RemotePlayer(LobbyObserver):
         self.lobby = lobby
         self.websocket = websocket
         self.player = player
-        self._queue = asyncio.Queue()
+        self._queue: asyncio.Queue[Event | NullDataEvent] = asyncio.Queue()
 
     def owner_changed(self, player: Player):
         self._queue.put_nowait(
@@ -209,7 +209,7 @@ class RemotePlayer(LobbyObserver):
         )
 
     def all_players_ready(self):
-        self._queue.put_nowait(Event(id=1, type="allPlayersReady", data=None))
+        self._queue.put_nowait(NullDataEvent(id=1, type="allPlayersReady"))
 
     def game_finished(self, winner: Player):
         self._queue.put_nowait(
@@ -404,7 +404,13 @@ AnyEventData = TypeVar("AnyEventData", bound=ApiModel)
 class Event(ApiModel, Generic[AnyEventData]):
     id: int
     type: str
-    data: AnyEventData | None
+    data: AnyEventData
+
+
+class NullDataEvent(ApiModel):
+    id: int
+    type: str
+    data: None = None
 
 
 class StartGameData(ApiModel):

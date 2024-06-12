@@ -231,17 +231,18 @@ async def test_continue_game(
     egor.continue_game()
 
     assert isinstance(lobby.state, Turns)
+    assert lobby.game  # TODO: Do something with it
 
     expected_events = [
         call.egor.turn_started(
             setup=lobby.state.setup,
-            turn_duration=lobby.settings.turn_duration,
+            turn_duration=lobby.game.settings.turn_duration,
             lead=yura,
             turn_count=2,
         ),
         call.yura.turn_started(
             setup=lobby.state.setup,
-            turn_duration=lobby.settings.turn_duration,
+            turn_duration=lobby.game.settings.turn_duration,
             lead=yura,
             turn_count=2,
             card=ANY,

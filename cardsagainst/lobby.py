@@ -31,12 +31,12 @@ class Lobby:
         owner: Player,
         state: Gathering,
     ) -> None:
+        self.state: State = state
         self.players: list[Player] = []
         self.owner: Player | None = owner
         self.table: list[CardOnTable] = []
         self.grave: set[Player] = set()
         self.uid: UUID = uuid4()
-        self.state: State = state
         self.state.lobby = self
 
     @property
@@ -113,7 +113,7 @@ class Lobby:
                     turn_count=self.turn_count,
                 )
 
-    def get_card_from_table(self, card) -> CardOnTable:
+    def get_card_from_table(self, card: PunchlineCard) -> CardOnTable:
         for card_on_table in self.table:
             if card is card_on_table.card:
                 return card_on_table
@@ -132,6 +132,7 @@ class Lobby:
 
         if not isinstance(self.state, Gathering):
             # TODO: Тут баг. Нужно зарефакторить
+            assert self.game, "Not gathering state means game already started"
             while len(player.hand) < self.game.settings.hand_size:
                 player.add_punchline_card(self.game.punchlines.get_card())
 
@@ -163,16 +164,6 @@ class Lobby:
                 pl.observer.owner_changed(self.owner)
 
         self.grave.add(player)
-
-        for card_on_table in self.table:
-            if card_on_table.player is player:
-                self.game.punchlines.dump([card_on_table.card])
-                # TODO: Если сбросить карту игрока, то надо как-то оповестить
-                #   остальных, что эту карту надо убрать со стола
-                self.table.remove(card_on_table)
-                print(f"Card is dumped and removed from the table. table={self.table}")
-                break
-
         for pl in self.all_players_except(player):
             pl.observer.player_left(player)
         print(f"Removed. self.lead={self.lead}, self.players={self.players}")
@@ -247,7 +238,7 @@ class Player:
         self.emoji = emoji
         self.name = name
         self.token = token
-        self.hand: list[AnyCard] = []
+        self.hand: list[PunchlineCard] = []
         self.uuid = uuid4().hex
         self.observer = LobbyObserver()
         self.score = 0
@@ -375,11 +366,8 @@ class Gathering(State):
         if player is not self.lobby.owner:
             raise PlayerNotOwnerError
 
-        self.lobby.game = Game(
-            setups=setups, punchlines=punchlines, settings=lobby_settings
-        )
+        self.lobby.game = Game(punchlines, setups, lobby_settings)
 
-        self.lobby.settings = lobby_settings
         for pl in self.lobby.all_players:
             for _ in range(self.lobby.game.settings.hand_size):
                 pl.add_punchline_card(self.lobby.game.punchlines.get_card())
@@ -441,6 +429,7 @@ class Turns(State):
         if player.is_ready:
             raise PlayerAlreadyReadyError()
 
+        assert self.lobby.game, "Refresh hand is allowed only when game is started"
         new_hand = [
             self.lobby.game.punchlines.get_card()
             for _ in range(self.lobby.game.settings.hand_size)
@@ -480,7 +469,7 @@ class Judgement(State):
         for pl in self.lobby.all_players:
             pl.observer.table_card_opened(card_on_table)
 
-    def pick_turn_winner(self, player, card) -> None:
+    def pick_turn_winner(self, player: Player, card: PunchlineCard) -> None:
         if player is not self.lobby.lead:
             raise PlayerNotLeadError
 
