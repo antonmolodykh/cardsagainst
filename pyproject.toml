@@ -3,7 +3,7 @@ name = "cardsagainst"
 version = "1.0.0"
 description = "Online game"
 authors = [
-    "amolodykh <antonmolodykh96@gmail.com>",
+    "Anton Molodykh <antonmolodykh96@gmail.com>",
     "Yuriy Kehter <yuriy.kehter+420cards@gmail.com>"
 ]
 readme = "README.md"
@@ -25,9 +25,13 @@ dynaconf = "^3.2.4"
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.4.2"
 alt-pytest-asyncio = ">=0.7.1,^0"
-# TODO: Перейти на ruff
-black = "^23.10.0"
+ruff = "^0.4.8"
+mypy = "^1.10.0"
 
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[[tool.mypy.overrides]]
+module = ["dynaconf.*"]
+ignore_missing_imports = true
