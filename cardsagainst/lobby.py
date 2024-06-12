@@ -273,6 +273,9 @@ class Player:
         self.lobby.state.refresh_hand(self)
 
     def make_turn(self, card: PunchlineCard) -> CardOnTable:
+        if card not in self.hand:
+            raise CardNotInPlayerHandError
+
         self.lobby.state.make_turn(self, card)
         return self.lobby.get_card_from_table(card)
 
@@ -372,7 +375,7 @@ class Turns(State):
         self.try_end_turn()
 
     def make_turn(self, player: Player, card: PunchlineCard) -> None:
-        self.put_card_on_table(player, card)
+        self.pick_card(player, card)
         self.try_end_turn()
 
     def try_end_turn(self) -> None:
@@ -386,7 +389,8 @@ class Turns(State):
     def end_turn(self):
         for player in self.lobby.players:
             if player.is_connected and not player.is_ready:
-                self.put_card_on_table(player, random.choice(player.hand))
+                card = random.choice(player.hand)
+                self.pick_card(player, card)
 
         random.shuffle(self.lobby.table)
         for pl in self.lobby.all_players:
@@ -399,10 +403,7 @@ class Turns(State):
             # TODO: make turn, return table
             raise NotImplementedError
 
-    def put_card_on_table(self, player: Player, card: PunchlineCard) -> None:
-        if card not in player.hand:
-            raise CardNotInPlayerHandError
-
+    def pick_card(self, player: Player, card: PunchlineCard):
         if prev_card := self.lobby.card_on_table_of(player):
             self.lobby.table.remove(prev_card)
             player.hand.append(prev_card.card)
