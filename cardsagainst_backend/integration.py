@@ -72,7 +72,10 @@ class SetupData(ApiModel):
     starts_with_punchline: bool
 
     @classmethod
-    def from_setup(cls, setup: SetupCard):
+    def from_setup(cls, setup: SetupCard | None):
+        if not setup:
+            return None
+
         return cls(
             id=setup.id,
             text=setup.text,
@@ -257,11 +260,7 @@ class RemotePlayer(LobbyObserver):
                         for card_on_table in self.lobby.table
                     ],
                     hand=[PunchlineData.from_card(item) for item in self.player.hand],
-                    setup=(
-                        SetupData.from_setup(self.lobby.state.setup)
-                        if isinstance(self.lobby.state, Judgement | Turns)
-                        else None
-                    ),
+                    setup=SetupData.from_setup(setup) if (setup := self.lobby.setup) else None,
                     timeout=self.lobby.game.settings.turn_duration,
                     lead_uuid=self.lobby.lead.uuid if self.lobby.lead else None,
                     owner_uuid=self.lobby.owner.uuid,

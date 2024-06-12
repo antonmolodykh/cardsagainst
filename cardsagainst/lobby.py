@@ -40,6 +40,10 @@ class Lobby:
         self.state.lobby = self
 
     @property
+    def setup(self):
+        return self.state.setup if isinstance(self.state, Judgement | Turns) else None
+
+    @property
     def all_players(self):
         if not self.lead:
             return self.players
