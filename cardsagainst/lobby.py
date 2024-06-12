@@ -86,6 +86,7 @@ class Lobby:
 
         # TODO: вынести таймер куда-то
         async def turn_timer() -> None:
+            assert self.game, "Turn starts when game already started"
             if turn_duration := self.game.settings.turn_duration:
                 await asyncio.sleep(turn_duration)
                 self.state.end_turn()
