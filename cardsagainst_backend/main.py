@@ -39,7 +39,6 @@ from cardsagainst_backend.dependencies import (
 )
 from cardsagainst_backend.models import Changelog
 
-observers: list[LobbyObserver] = []
 
 app = FastAPI(lifespan=lifespan)
 
@@ -51,6 +50,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+observers: list[LobbyObserver] = []
 player_by_token: MutableMapping[str, Player] = WeakValueDictionary()
 lobbies: dict[str, Lobby] = {}
 remove_player_tasks: dict[str, Task] = {}
@@ -58,17 +58,6 @@ remove_player_tasks: dict[str, Task] = {}
 
 class ApiModel(BaseModel):
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
-
-
-def get_player_data_from_player(player: Player) -> PlayerData:
-    return PlayerData(
-        uuid=player.uuid,
-        name=player.name,
-        emoji=player.emoji,
-        state=PlayerState.PENDING,
-        score=player.score,
-        is_connected=player.is_connected,
-    )
 
 
 class ChangelogData(ApiModel):
@@ -159,7 +148,7 @@ class RemotePlayer(LobbyObserver):
 
     def player_joined(self, player: Player):
         self._queue.put_nowait(
-            Event(id=1, type="playerJoined", data=get_player_data_from_player(player))
+            Event(id=1, type="playerJoined", data=PlayerData.from_player(player))
         )
 
     def player_left(self, player: Player):
@@ -260,7 +249,7 @@ class RemotePlayer(LobbyObserver):
                     state=GameState(type(self.lobby.state).__name__.lower()),
                     turn_count=self.lobby.turn_count,
                     players=[
-                        get_player_data_from_player(player)
+                        PlayerData.from_player(player)
                         for player in self.lobby.all_players
                     ],
                     table=[
@@ -415,6 +404,17 @@ class PlayerData(ApiModel):
     state: PlayerState
     score: int
     is_connected: bool
+
+    @classmethod
+    def from_player(cls, player: Player) -> PlayerData:
+        return PlayerData(
+            uuid=player.uuid,
+            name=player.name,
+            emoji=player.emoji,
+            state=PlayerState.PENDING,
+            score=player.score,
+            is_connected=player.is_connected,
+        )
 
 
 AnyEventData = TypeVar("AnyEventData", bound=ApiModel)
