@@ -32,8 +32,12 @@ from cardsagainst.profile import Profile
 from cardsagainst.settings import LobbySettings
 from cardsagainst_backend.config import config
 from cardsagainst_backend.dao import CardsDAO, GameStatsDAO
-from cardsagainst_backend.dependencies import lifespan, SessionDependency, \
-    GameStatsDAODependency, CardsDAODependency
+from cardsagainst_backend.dependencies import (
+    lifespan,
+    SessionDependency,
+    GameStatsDAODependency,
+    CardsDAODependency,
+)
 from cardsagainst_backend.models import Changelog
 
 observers: list[LobbyObserver] = []
