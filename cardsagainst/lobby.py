@@ -22,7 +22,6 @@ from cardsagainst.settings import LobbySettings
 class Lobby:
     game: Game | None = None
     lead: Player | None = None
-    observer: LobbyObserver
     # TODO: Move to Game
     is_game_endless: bool = False
     turn_count = 0
