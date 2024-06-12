@@ -173,6 +173,13 @@ class Lobby:
         print(f"Removed. self.lead={self.lead}, self.players={self.players}")
         self.state.remove_player(player)
 
+    def is_card_picked(self, card_on_table):
+        return (
+            card_on_table.player is self.state.winner
+            if isinstance(self.state, Judgement)
+            else False
+        )
+
 
 class LobbyObserver:
     def owner_changed(self, player: Player):

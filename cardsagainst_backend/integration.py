@@ -247,10 +247,10 @@ class RemotePlayer(LobbyObserver):
                             card=PunchlineData.from_card(card_on_table.card)
                             if card_on_table.is_open
                             else None,
-                            is_picked=is_card_picked(self.lobby, card_on_table),
+                            is_picked=self.lobby.is_card_picked(card_on_table),
                             author=(
                                 card_on_table.player.name
-                                if is_card_picked(self.lobby, card_on_table)
+                                if self.lobby.is_card_picked(card_on_table)
                                 else None
                             ),
                         )
@@ -564,14 +564,6 @@ async def run_remove_player(lobby, player, lobby_token, player_token):
     if not lobby.all_players:
         del lobbies[lobby_token]
         print(f"Lobby deleted. lobbies={lobbies}")
-
-
-def is_card_picked(lobby: Lobby, card_on_table):
-    return (
-        card_on_table.player is lobby.state.winner
-        if isinstance(lobby.state, Judgement)
-        else False
-    )
 
 
 @router.get("/changelog")
