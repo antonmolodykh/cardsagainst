@@ -1,16 +1,15 @@
 from unittest.mock import Mock
 
 import pytest
-from config import config
+from cardsagainst_backend.config import config
 
-from cardsagainst import (
+from cardsagainst.lobby import (
     Deck,
     Gathering,
     Lobby,
     LobbyObserver,
     LobbySettings,
     Player,
-    Profile,
     PunchlineCard,
     SetupCard,
 )
@@ -58,17 +57,17 @@ def outbox() -> Mock:
 
 @pytest.fixture
 def egor() -> Player:
-    return Player(profile=Profile(name="egor", emoji="🍎"), token="egor-token")
+    return Player(name="egor", emoji="🍎", token="egor-token")
 
 
 @pytest.fixture
 def anton() -> Player:
-    return Player(profile=Profile(name="anton", emoji="🍎"), token="anton-token")
+    return Player(name="anton", emoji="🍎", token="anton-token")
 
 
 @pytest.fixture
 def yura() -> Player:
-    return Player(profile=Profile(name="yura", emoji="🍎"), token="yura-token")
+    return Player(name="yura", emoji="🍎", token="yura-token")
 
 
 @pytest.fixture

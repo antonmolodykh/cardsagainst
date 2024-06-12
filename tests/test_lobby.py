@@ -1,9 +1,9 @@
 import asyncio
 from unittest.mock import ANY, Mock, call
-
+from dataclasses import replace
 import pytest
 
-from cardsagainst import (
+from cardsagainst.lobby import (
     CardNotInPlayerHandError,
     Deck,
     Judgement,
@@ -306,11 +306,8 @@ async def test_start_game_after_finish(
     egor.pick_turn_winner(card_on_table.card)
     await asyncio.sleep(0.01)
 
-    egor.start_game(
-        lobby_settings.model_copy(update={"turn_duration": 10}),
-        setup_deck,
-        punchline_deck,
-    )
+    lobby_settings.turn_duration = 10
+    egor.start_game(lobby_settings, setup_deck, punchline_deck)
 
     assert isinstance(lobby.state, Turns)
 

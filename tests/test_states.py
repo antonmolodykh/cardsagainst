@@ -2,7 +2,7 @@ import asyncio
 
 import pytest
 
-from cardsagainst import (
+from cardsagainst.lobby import (
     CardOnTable,
     Deck,
     Finished,
