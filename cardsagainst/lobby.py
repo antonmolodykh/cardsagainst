@@ -5,7 +5,7 @@ import random
 from asyncio import Task
 from uuid import uuid4, UUID
 
-from cardsagainst.deck import SetupCard, PunchlineCard, Deck
+from cardsagainst.deck import SetupCard, PunchlineCard, Deck, AnyCard
 from cardsagainst.exceptions import (
     CardNotInPlayerHandError,
     PlayerNotLeadError,
@@ -246,7 +246,7 @@ class Player:
         self.emoji = emoji
         self.name = name
         self.token = token
-        self.hand = []
+        self.hand: list[AnyCard] = []
         self.uuid = uuid4().hex
         self.observer = LobbyObserver()
         self.score = 0
@@ -324,6 +324,17 @@ class State:
     def open_table_card(self, player: Player, card_on_table: CardOnTable) -> None:
         raise Exception(
             f"method `open_punchline_card` not expected in state {type(self).__name__}"
+        )
+
+    def start_game(
+        self,
+        player: Player,
+        lobby_settings: LobbySettings,
+        setups: Deck[SetupCard],
+        punchlines: Deck[PunchlineCard],
+    ) -> GameStarted:
+        raise Exception(
+            f"method `start_game` not expected in state {type(self).__name__}"
         )
 
     def start_turn(self):
