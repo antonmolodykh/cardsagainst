@@ -28,7 +28,6 @@ from cardsagainst.lobby import (
     CardOnTable,
     LobbyObserver,
 )
-from cardsagainst.profile import Profile
 from cardsagainst.settings import LobbySettings
 from cardsagainst_backend.config import config
 from cardsagainst_backend.dao import CardsDAO, GameStatsDAO

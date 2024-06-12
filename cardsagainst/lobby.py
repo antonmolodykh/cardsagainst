@@ -16,7 +16,6 @@ from cardsagainst.exceptions import (
     ScoreTooLowError,
 )
 from cardsagainst.game import Game, GameStarted
-from cardsagainst.profile import Profile
 from cardsagainst.settings import LobbySettings
 
 
