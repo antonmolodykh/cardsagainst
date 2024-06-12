@@ -475,3 +475,15 @@ async def test_refresh_hand_already_ready(
     with pytest.raises(PlayerAlreadyReadyError):
         yura.refresh_hand()
     assert yura.hand == prev_hand
+
+
+@pytest.mark.skip("Until voting implemented.")
+@pytest.mark.usefixtures("egor_connected", "game_started")
+async def test_owner_is_unset_if_all_players_left(
+    lobby: Lobby, egor: Player, outbox: Mock
+) -> None:
+    lobby.disconnect(egor)
+    lobby.remove_player(egor)
+    assert not lobby.owner
+    lobby.connect(egor)
+    assert egor is lobby.owner
