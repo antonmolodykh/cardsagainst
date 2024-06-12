@@ -25,7 +25,7 @@ AnyCard = TypeVar("AnyCard", bound=SetupCard | PunchlineCard)
 class Deck(Generic[AnyCard]):
     def __init__(self, cards: list[AnyCard]) -> None:
         self.cards = cards
-        self._dump = []
+        self._dump: list[AnyCard] = []
         self._shuffle()
         self.mapping = {card.id: card for card in cards}
 

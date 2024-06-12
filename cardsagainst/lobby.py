@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import random
 from asyncio import Task
-from uuid import uuid4
+from uuid import uuid4, UUID
 
 from cardsagainst.deck import SetupCard, PunchlineCard, Deck
 from cardsagainst.exceptions import (
@@ -32,10 +32,10 @@ class Lobby:
         state: Gathering,
     ) -> None:
         self.players: list[Player] = []
-        self.owner = owner
+        self.owner: Player | None = owner
         self.table: list[CardOnTable] = []
         self.grave: set[Player] = set()
-        self.uid: uuid4 = uuid4()
+        self.uid: UUID = uuid4()
         self.state: State = state
         self.state.lobby = self
 
@@ -55,8 +55,7 @@ class Lobby:
         return None
 
     def change_owner(self) -> None:
-        # TODO: Что делать, если не осталось игроков?
-        self.owner = None  # это поле не nullable
+        self.owner = None
         for player in self.all_players:
             if player.is_connected:
                 self.owner = player
@@ -122,6 +121,9 @@ class Lobby:
 
             self.grave.remove(player)
             self.add_player(player)
+
+        if not self.owner:
+            self.change_owner()
 
         if not isinstance(self.state, Gathering):
             # TODO: Тут баг. Нужно зарефакторить
