@@ -15,6 +15,7 @@ class CardsDAO:
         async with self.async_session() as session:
             result = await session.execute(select(Setup))
 
+            # TODO: Use deck_id
             return Deck(
                 cards=[
                     SetupCard(
@@ -31,6 +32,7 @@ class CardsDAO:
         async with self.async_session() as session:
             result = await session.execute(select(Punchline))
 
+            # TODO: Use deck_id
             return Deck(
                 cards=[
                     PunchlineCard(
