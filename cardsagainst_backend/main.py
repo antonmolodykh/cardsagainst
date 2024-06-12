@@ -64,8 +64,8 @@ class ApiModel(BaseModel):
 def get_player_data_from_player(player: Player) -> PlayerData:
     return PlayerData(
         uuid=player.uuid,
-        name=player.profile.name,
-        emoji=player.profile.emoji,
+        name=player.name,
+        emoji=player.emoji,
         state=PlayerState.PENDING,
         score=player.score,
         is_connected=player.is_connected,
@@ -271,7 +271,7 @@ class RemotePlayer(LobbyObserver):
                             else None,
                             is_picked=is_card_picked(self.lobby, card_on_table),
                             author=(
-                                card_on_table.player.profile.name
+                                card_on_table.player.name
                                 if is_card_picked(self.lobby, card_on_table)
                                 else None
                             ),
@@ -480,10 +480,8 @@ async def connect(
     connect_request: ConnectRequest,
 ) -> ConnectResponse:
     player = Player(
-        profile=Profile(
-            name=connect_request.name,
-            emoji=connect_request.emoji,
-        ),
+        name=connect_request.name,
+        emoji=connect_request.emoji,
         token=uuid4().hex[:8],
     )
     if lobby_token:

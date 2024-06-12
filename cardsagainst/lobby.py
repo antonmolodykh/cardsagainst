@@ -80,13 +80,15 @@ class Player:
     uuid: str
     hand: list[PunchlineCard]
     score: int = 0
-    profile: Profile
     token: str
     is_ready = False
     is_connected: bool = False
+    name: str
+    emoji: str
 
-    def __init__(self, profile: Profile, token: str) -> None:
-        self.profile = profile
+    def __init__(self, name: str, emoji: str, token: str) -> None:
+        self.emoji = emoji
+        self.name = name
         self.token = token
         self.hand = []
         self.uuid = uuid4().hex
@@ -136,7 +138,7 @@ class Player:
         self.lobby.state.continue_game(self)
 
     def __repr__(self) -> str:
-        return f"Player({self.profile.name})"
+        return f"Player({self.name})"
 
 
 class CardOnTable:
