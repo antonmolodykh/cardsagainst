@@ -9,3 +9,4 @@ class LobbySettings:
     winning_score: int
     finish_delay: int = 5
     start_turn_delay: int = 5
+    hand_size: int = 10

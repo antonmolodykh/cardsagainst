@@ -74,16 +74,7 @@ class LobbyObserver:
 
 
 class Player:
-    observer: LobbyObserver
     lobby: Lobby
-    uuid: str
-    hand: list[PunchlineCard]
-    score: int = 0
-    token: str
-    is_ready = False
-    is_connected: bool = False
-    name: str
-    emoji: str
 
     def __init__(self, name: str, emoji: str, token: str) -> None:
         self.emoji = emoji
@@ -92,6 +83,9 @@ class Player:
         self.hand = []
         self.uuid = uuid4().hex
         self.observer = LobbyObserver()
+        self.score = 0
+        self.is_ready = False
+        self.is_connected = False
 
     def connect(self, observer: LobbyObserver) -> None:
         self.lobby.connect(self)
@@ -141,13 +135,10 @@ class Player:
 
 
 class CardOnTable:
-    card: PunchlineCard
-    player: Player
-    is_open: bool = False
-
     def __init__(self, card: PunchlineCard, player: Player) -> None:
         self.card = card
         self.player = player
+        self.is_open = False
 
 
 class State:
@@ -209,7 +200,7 @@ class Gathering(State):
 
         self.lobby.settings = lobby_settings
         for pl in self.lobby.all_players:
-            for _ in range(self.lobby.HAND_SIZE):
+            for _ in range(self.lobby.game.settings.hand_size):
                 pl.add_punchline_card(self.lobby.game.punchlines.get_card())
             pl.observer.game_started()
 
@@ -272,7 +263,8 @@ class Turns(State):
             raise PlayerAlreadyReadyError()
 
         new_hand = [
-            self.lobby.game.punchlines.get_card() for _ in range(self.lobby.HAND_SIZE)
+            self.lobby.game.punchlines.get_card()
+            for _ in range(self.lobby.game.settings.hand_size)
         ]
         self.lobby.game.punchlines.dump(player.hand)
         player.hand = new_hand
@@ -287,11 +279,10 @@ class Turns(State):
 
 
 class Judgement(State):
-    winner: Player | None
+    winner: Player | None = None
 
     def __init__(self, setup: SetupCard):
         self.setup = setup
-        self.winner = None
 
     def remove_player(self, player: Player) -> None:
         if player is self.lobby.lead:
@@ -393,30 +384,23 @@ class Finished(State):
 
 
 class Lobby:
-    uid: uuid4
-    players: list[Player]
-    lead: Player | None
-    owner: Player
-    table: list[CardOnTable]
-    grave: set[Player]
+    lead: Player | None = None
     observer: LobbyObserver
-    turn_count: int
+    # TODO: Move to Game
     is_game_endless: bool = False
-
-    HAND_SIZE = 10
 
     def __init__(
         self,
         owner: Player,
         state: Gathering,
     ) -> None:
-        self.players = []
+        self.players: list[Player] = []
         self.lead = None
         self.game = None
         self.owner = owner
-        self.table = []
-        self.grave = set()
-        self.uid = uuid4()
+        self.table: list[CardOnTable] = []
+        self.grave: set[Player] = set()
+        self.uid: uuid4 = uuid4()
         self.state = state
         self.state.lobby = self
         self.turn_count = 0
@@ -473,7 +457,7 @@ class Lobby:
 
         for pl in self.all_players:
             pl.is_ready = False
-            if len(pl.hand) != self.HAND_SIZE:
+            if len(pl.hand) != self.game.settings.hand_size:
                 new_card = self.game.punchlines.get_card()
                 pl.add_punchline_card(new_card)
                 pl.observer.turn_started(
@@ -507,7 +491,7 @@ class Lobby:
 
         if not isinstance(self.state, Gathering):
             # TODO: Тут баг. Нужно зарефакторить
-            while len(player.hand) < self.HAND_SIZE:
+            while len(player.hand) < self.game.settings.hand_size:
                 player.add_punchline_card(self.game.punchlines.get_card())
 
         for pl in self.all_players_except(player):
