@@ -66,8 +66,6 @@ class Lobby:
                 return
 
     def transit_to(self, new_state: State) -> None:
-        # TODO: Исправить, стейты зависят от лобби но могут оказаться без него
-        # Также лобби не доступно в конструкторах стейтов
         self.state = new_state
         self.state.lobby = self
 
