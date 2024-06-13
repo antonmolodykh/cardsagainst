@@ -301,11 +301,13 @@ class RemotePlayer(LobbyObserver):
     ) -> None:
         match json_data["type"]:
             case "startGame":
-                event = Event[StartGameData].model_validate(json_data)
+                start_game_event = Event[StartGameData].model_validate(json_data)
                 game_started = self.player.start_game(
                     settings=LobbySettings(
-                        turn_duration=event.data.turn_duration,
-                        winning_score=event.data.winning_score or config.winning_score,
+                        turn_duration=start_game_event.data.turn_duration,
+                        winning_score=(
+                            start_game_event.data.winning_score or config.winning_score
+                        ),
                     ),
                     setups=await cards_dao.get_setups(deck_id="one"),
                     punchlines=await cards_dao.get_punchlines(deck_id="one"),
@@ -316,23 +318,31 @@ class RemotePlayer(LobbyObserver):
             case "refreshHand":
                 self.player.refresh_hand()
             case "makeTurn":
-                event = Event[MakeTurnData].model_validate(json_data)
+                make_turn_event = Event[MakeTurnData].model_validate(json_data)
                 try:
+                    assert self.lobby.game, "Game should be started to make turn"
                     card = self.lobby.game.punchlines.get_card_by_uuid(
-                        int(event.data.id)
+                        int(make_turn_event.data.id)
                     )
                 except KeyError:
                     print("unknown card")
                     return
                 self.player.make_turn(card)
             case "openTableCard":
-                event = Event[OpenTableCardData].model_validate(json_data)
-                self.player.open_table_card(self.lobby.table[event.data.index])
+                open_table_card_event = Event[OpenTableCardData].model_validate(
+                    json_data
+                )
+                self.player.open_table_card(
+                    self.lobby.table[open_table_card_event.data.index]
+                )
             case "pickTurnWinner":
-                event = Event[PickTurnWinnerData].model_validate(json_data)
+                pick_turn_winner_event = Event[PickTurnWinnerData].model_validate(
+                    json_data
+                )
                 try:
+                    assert self.lobby.game, "Game should be started to pick turn winner"
                     card = self.lobby.game.punchlines.get_card_by_uuid(
-                        int(event.data.id)
+                        int(pick_turn_winner_event.data.id)
                     )
                 except KeyError:
                     return
@@ -569,8 +579,8 @@ async def changelog(
     version: Annotated[str | None, Query(alias="version")] = None,
 ):
     async with async_session() as session:
-        query = select(Changelog.version).order_by(Changelog.id.desc()).limit(1)
-        result = await session.execute(query)
+        version_query = select(Changelog.version).order_by(Changelog.id.desc()).limit(1)
+        result = await session.execute(version_query)
         current_version = result.first()[0]
 
     if not version:

@@ -131,8 +131,8 @@ class Lobby:
             self.change_owner()
 
         if not isinstance(self.state, Gathering):
-            # TODO: Тут баг. Нужно зарефакторить
             assert self.game, "Not gathering state means game already started"
+            # TODO: Тут баг. Нужно зарефакторить
             while len(player.hand) < self.game.settings.hand_size:
                 player.add_punchline_card(self.game.punchlines.get_card())
 
@@ -485,12 +485,14 @@ class Judgement(State):
         for pl in self.lobby.all_players:
             pl.observer.turn_ended(card_on_table.player, card)
 
+        assert self.lobby.game, "Game already started"
         self.lobby.game.punchlines.dump(
             [card_on_table.card for card_on_table in self.lobby.table]
         )
         self.lobby.table = []
 
         async def finish_game(winner: Player):
+            assert self.lobby.game, "Turn starts when game already started"
             await asyncio.sleep(self.lobby.game.settings.finish_delay)
             self.finish_game(winner)
 

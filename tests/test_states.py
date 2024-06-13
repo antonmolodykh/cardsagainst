@@ -80,6 +80,7 @@ async def test_transit_judgement_to_finished(
 async def test_transit_finished_to_turns(
     lobby: Lobby, egor: Player, anton: Player
 ) -> None:
+    assert lobby.game  # TODO: Do something with it
     lobby.transit_to(Finished(anton, lobby.game.setups.get_card()))
     punchline_card = lobby.game.punchlines.get_card()
     lobby.table.append(CardOnTable(punchline_card, anton))
