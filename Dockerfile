@@ -9,4 +9,4 @@ COPY . .
 RUN poetry install --without dev
 
 EXPOSE 8888
-ENTRYPOINT ["poetry", "run", "uvicorn", "main:app",  "--host", "0.0.0.0", "--port", "8888"]
+ENTRYPOINT ["poetry", "run", "uvicorn", "cardsagainst_backend.main:app",  "--host", "0.0.0.0", "--port", "8888"]

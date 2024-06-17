@@ -1,9 +1,9 @@
 import asyncio
 from unittest.mock import ANY, Mock, call
-
+from dataclasses import replace
 import pytest
 
-from lobby import (
+from cardsagainst.lobby import (
     CardNotInPlayerHandError,
     Deck,
     Judgement,
@@ -168,7 +168,7 @@ async def test_start_game(
     assert isinstance(lobby.state, Turns)
 
     expected_events = [
-        call.game_started(egor),
+        call.game_started(),
         call.turn_started(
             setup=lobby.state.setup,
             turn_duration=lobby_settings.turn_duration,
@@ -179,7 +179,7 @@ async def test_start_game(
     outbox.egor.assert_has_calls(expected_events)
 
     expected_events = [
-        call.game_started(yura),
+        call.game_started(),
         call.turn_started(
             setup=lobby.state.setup,
             turn_duration=lobby_settings.turn_duration,
@@ -231,17 +231,18 @@ async def test_continue_game(
     egor.continue_game()
 
     assert isinstance(lobby.state, Turns)
+    assert lobby.game  # TODO: Do something with it
 
     expected_events = [
         call.egor.turn_started(
             setup=lobby.state.setup,
-            turn_duration=lobby.settings.turn_duration,
+            turn_duration=lobby.game.settings.turn_duration,
             lead=yura,
             turn_count=2,
         ),
         call.yura.turn_started(
             setup=lobby.state.setup,
-            turn_duration=lobby.settings.turn_duration,
+            turn_duration=lobby.game.settings.turn_duration,
             lead=yura,
             turn_count=2,
             card=ANY,
@@ -306,16 +307,13 @@ async def test_start_game_after_finish(
     egor.pick_turn_winner(card_on_table.card)
     await asyncio.sleep(0.01)
 
-    egor.start_game(
-        lobby_settings.model_copy(update={"turn_duration": 10}),
-        setup_deck,
-        punchline_deck,
-    )
+    lobby_settings.turn_duration = 10
+    egor.start_game(lobby_settings, setup_deck, punchline_deck)
 
     assert isinstance(lobby.state, Turns)
 
     expected_events = [
-        call.game_started(egor),
+        call.game_started(),
         call.turn_started(
             setup=lobby.state.setup,
             turn_duration=10,
@@ -326,7 +324,7 @@ async def test_start_game_after_finish(
     outbox.egor.assert_has_calls(expected_events)
 
     expected_events = [
-        call.game_started(yura),
+        call.game_started(),
         call.turn_started(
             setup=lobby.state.setup,
             turn_duration=10,
@@ -415,7 +413,10 @@ async def test_make_multiple_choice(
     yura.make_turn(second_choice)
     anton.make_turn(anton.hand[0])
     assert isinstance(lobby.state, Judgement)
-    assert lobby.card_on_table_of(yura).card is second_choice
+
+    card_on_table = lobby.card_on_table_of(yura)
+    assert card_on_table
+    assert card_on_table.card is second_choice
     assert first_choice in yura.hand
 
 
@@ -478,3 +479,15 @@ async def test_refresh_hand_already_ready(
     with pytest.raises(PlayerAlreadyReadyError):
         yura.refresh_hand()
     assert yura.hand == prev_hand
+
+
+@pytest.mark.skip("Until voting implemented.")
+@pytest.mark.usefixtures("egor_connected", "game_started")
+async def test_owner_is_unset_if_all_players_left(
+    lobby: Lobby, egor: Player, outbox: Mock
+) -> None:
+    lobby.disconnect(egor)
+    lobby.remove_player(egor)
+    assert not lobby.owner
+    lobby.connect(egor)
+    assert egor is lobby.owner

@@ -1,8 +1,10 @@
-from sqlalchemy import select
+from sqlalchemy import select, insert
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
-from lobby import Deck, PunchlineCard, SetupCard
-from models import Punchline, Setup
+from cardsagainst.deck import PunchlineCard, Deck, SetupCard
+from cardsagainst.game import GameStarted
+from cardsagainst.lobby import Lobby
+from cardsagainst_backend.models import GameStats, Punchline, Setup
 
 
 class CardsDAO:
@@ -13,6 +15,7 @@ class CardsDAO:
         async with self.async_session() as session:
             result = await session.execute(select(Setup))
 
+            # TODO: Use deck_id
             return Deck(
                 cards=[
                     SetupCard(
@@ -29,6 +32,7 @@ class CardsDAO:
         async with self.async_session() as session:
             result = await session.execute(select(Punchline))
 
+            # TODO: Use deck_id
             return Deck(
                 cards=[
                     PunchlineCard(
@@ -38,3 +42,17 @@ class CardsDAO:
                     for (punchline_card,) in result.all()
                 ]
             )
+
+
+class GameStatsDAO:
+    def __init__(self, async_session: async_sessionmaker):
+        self.async_session = async_session
+
+    async def insert(self, event: GameStarted) -> None:
+        async with self.async_session() as session:
+            query = insert(GameStats).values(
+                winning_score=event.game.settings.winning_score,
+                turn_duration=event.game.settings.turn_duration,
+            )
+            await session.execute(query)
+            await session.commit()

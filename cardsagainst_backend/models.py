@@ -36,3 +36,11 @@ class Changelog(Base):
     version: Mapped[str] = mapped_column(Text, nullable=False)
     date: Mapped[datetime.date] = mapped_column(Date, nullable=False)
     text: Mapped[str] = mapped_column(Text, nullable=False)
+
+
+class GameStats(Base):
+    __tablename__ = "stats"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    winning_score: Mapped[int] = mapped_column(nullable=False)
+    turn_duration: Mapped[int] = mapped_column(nullable=True)

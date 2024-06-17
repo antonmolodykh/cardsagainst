@@ -4,10 +4,10 @@ import pytest
 from sqlalchemy import insert, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from dao import CardsDAO
-from db import create_engine, create_tables_if_not_exist
-from lobby import PunchlineCard, SetupCard
-from models import Punchline, Setup, metadata
+from cardsagainst_backend.dao import CardsDAO
+from cardsagainst_backend.db import create_engine, create_tables_if_not_exist
+from cardsagainst.deck import PunchlineCard, SetupCard
+from cardsagainst_backend.models import Punchline, Setup, metadata
 
 
 @pytest.fixture
