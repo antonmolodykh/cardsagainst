@@ -253,7 +253,11 @@ class RemotePlayer(LobbyObserver):
                         if (setup := self.lobby.setup)
                         else None
                     ),
-                    timeout=self.lobby.game.settings.turn_duration,
+                    timeout=(
+                        self.lobby.game.settings.turn_duration
+                        if self.lobby.game
+                        else None
+                    ),
                     lead_uuid=self.lobby.lead.uuid if self.lobby.lead else None,
                     owner_uuid=self.lobby.owner.uuid,
                     self_uuid=self.player.uuid,
@@ -515,6 +519,7 @@ async def websocket_endpoint(
     cards_dao: CardsDAODependency,
     game_stats_dao: GameStatsDAODependency,
 ):
+    print("accepted")
     await websocket.accept()
     try:
         lobby = lobbies[lobby_token]

@@ -39,9 +39,8 @@ class Changelog(Base):
 
 
 class GameStats(Base):
-    __tablename__ = "game_stats"
+    __tablename__ = "stats"
 
     id: Mapped[int] = mapped_column(primary_key=True)
     winning_score: Mapped[int] = mapped_column(nullable=False)
-    turn_duration: Mapped[int] = mapped_column(nullable=False)
-    hand_size: Mapped[int] = mapped_column(nullable=False)
+    turn_duration: Mapped[int] = mapped_column(nullable=True)
